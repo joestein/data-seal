@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}{{ powerform.name }} - DataSeal{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2>{{ powerform.name }}</h2>
+    <p>Please provide your information to begin signing.</p>
+
+    <form id="powerform" method="post" style="margin-top: 24px;">
+        {% for role in roles %}
+        <fieldset style="border: 1px solid #e5e7eb; border-radius: 6px; padding: 16px; margin-bottom: 16px;">
+            <legend style="font-weight: 600; padding: 0 8px;">{{ role.role_name }}</legend>
+            <div style="margin-bottom: 12px;">
+                <label style="display: block; font-size: 14px; font-weight: 500; margin-bottom: 4px;">Full Name</label>
+                <input type="text" name="{{ role.role_name }}_name" required
+                       style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 14px;">
+            </div>
+            <div>
+                <label style="display: block; font-size: 14px; font-weight: 500; margin-bottom: 4px;">Email Address</label>
+                <input type="email" name="{{ role.role_name }}_email" required
+                       style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 14px;">
+            </div>
+        </fieldset>
+        {% endfor %}
+
+        <button type="submit" class="btn btn-primary" style="width: 100%; text-align: center;">
+            Begin Signing
+        </button>
+    </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.getElementById('powerform').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const formData = new FormData(this);
+    const recipients = {};
+
+    {% for role in roles %}
+    recipients["{{ role.role_name }}"] = {
+        name: formData.get("{{ role.role_name }}_name"),
+        email: formData.get("{{ role.role_name }}_email")
+    };
+    {% endfor %}
+
+    const resp = await fetch(window.location.pathname, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({recipients: recipients})
+    });
+
+    if (resp.ok) {
+        const data = await resp.json();
+        if (data.signing_url) {
+            window.location.href = data.signing_url;
+        } else {
+            alert('Envelope created. Check your email for signing links.');
+        }
+    } else {
+        const err = await resp.json();
+        alert(err.detail || 'An error occurred');
+    }
+});
+</script>
+{% endblock %}

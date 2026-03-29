@@ -1,0 +1,168 @@
+{% extends "base.html" %}
+{% block title %}Sign: {{ envelope.title }} - DataSeal{% endblock %}
+
+{% block extra_head %}
+<style>
+    .document-container { position: relative; margin: 16px 0; }
+    .page-image { width: 100%; display: block; border: 1px solid #e5e7eb; }
+    .field-overlay {
+        position: absolute;
+        border: 2px solid #2563eb;
+        background: rgba(37, 99, 235, 0.1);
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 12px;
+        color: #2563eb;
+    }
+    .field-overlay.completed { border-color: #059669; background: rgba(5, 150, 105, 0.1); color: #059669; }
+    .field-overlay.required { border-color: #dc2626; }
+    .progress-bar { height: 4px; background: #e5e7eb; border-radius: 2px; margin: 8px 0; }
+    .progress-fill { height: 100%; background: #2563eb; border-radius: 2px; transition: width 0.3s; }
+    .signing-footer { position: fixed; bottom: 0; left: 0; right: 0; background: white; border-top: 1px solid #e5e7eb; padding: 12px 24px; display: flex; justify-content: space-between; align-items: center; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2>{{ envelope.title }}</h2>
+    <p>Hello {{ recipient.name }}, please review and sign the document below.</p>
+    {% if envelope.message %}
+    <p style="color: #6b7280; margin-top: 8px;">{{ envelope.message }}</p>
+    {% endif %}
+    <div class="progress-bar">
+        <div class="progress-fill" id="progress" style="width: 0%"></div>
+    </div>
+    <p id="progress-text" style="font-size: 13px; color: #6b7280;"></p>
+</div>
+
+<div id="documents">
+    <!-- Documents and fields will be rendered by JavaScript -->
+</div>
+
+<div class="signing-footer">
+    <button class="btn btn-danger" onclick="declineSigning()">Decline</button>
+    <button class="btn btn-primary btn-disabled" id="finish-btn" disabled onclick="completeSigning()">Finish Signing</button>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const TOKEN = "{{ token }}";
+const API_BASE = "/api/v1/signing/" + TOKEN;
+
+async function loadSession() {
+    const resp = await fetch(API_BASE);
+    const data = await resp.json();
+    renderDocuments(data.documents);
+    updateProgress(data.documents);
+}
+
+function renderDocuments(documents) {
+    const container = document.getElementById('documents');
+    documents.forEach(doc => {
+        doc.pages.forEach(page => {
+            const pageDiv = document.createElement('div');
+            pageDiv.className = 'document-container';
+            pageDiv.style.position = 'relative';
+
+            const img = document.createElement('img');
+            img.src = page.image_url;
+            img.className = 'page-image';
+            img.onload = function() {
+                // Render field overlays after image loads
+                const fields = doc.fields.filter(f => f.page_number === page.page_number);
+                fields.forEach(field => {
+                    const overlay = document.createElement('div');
+                    overlay.className = 'field-overlay' + (field.value ? ' completed' : '') + (field.is_required && !field.value ? ' required' : '');
+                    overlay.style.left = field.x_position + '%';
+                    overlay.style.top = field.y_position + '%';
+                    overlay.style.width = field.width + '%';
+                    overlay.style.height = field.height + '%';
+                    overlay.textContent = field.value ? 'Done' : field.type.replace('_', ' ');
+                    overlay.onclick = () => handleFieldClick(field, doc.id);
+                    pageDiv.appendChild(overlay);
+                });
+            };
+            pageDiv.appendChild(img);
+            container.appendChild(pageDiv);
+        });
+    });
+}
+
+function updateProgress(documents) {
+    let total = 0, completed = 0;
+    documents.forEach(doc => {
+        doc.fields.forEach(f => {
+            if (f.is_required) total++;
+            if (f.value) completed++;
+        });
+    });
+    const pct = total > 0 ? (completed / total * 100) : 100;
+    document.getElementById('progress').style.width = pct + '%';
+    document.getElementById('progress-text').textContent = completed + ' of ' + total + ' required fields completed';
+    document.getElementById('finish-btn').disabled = completed < total;
+    if (completed >= total) {
+        document.getElementById('finish-btn').className = 'btn btn-success';
+    }
+}
+
+async function handleFieldClick(field, docId) {
+    if (field.value) return;
+    let value;
+    if (field.type === 'signature' || field.type === 'initials') {
+        value = prompt('Type your ' + (field.type === 'signature' ? 'full name' : 'initials') + ':');
+        if (!value) return;
+        // For MVP, encode typed name as base64 text
+        value = btoa(value);
+    } else if (field.type === 'text') {
+        value = prompt(field.placeholder || 'Enter text:');
+        if (!value) return;
+    } else if (field.type === 'checkbox') {
+        value = 'true';
+    } else if (field.type === 'date_signed') {
+        value = new Date().toISOString().split('T')[0];
+    } else if (field.type === 'dropdown') {
+        value = prompt('Choose: ' + (field.dropdown_options || []).join(', '));
+        if (!value) return;
+    }
+
+    const resp = await fetch(API_BASE + '/fields/' + field.id, {
+        method: 'PUT',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({value: value})
+    });
+    if (resp.ok) {
+        location.reload();
+    } else {
+        const err = await resp.json();
+        alert(err.detail || 'Error updating field');
+    }
+}
+
+async function completeSigning() {
+    if (!confirm('Are you sure you want to complete signing?')) return;
+    const resp = await fetch(API_BASE + '/complete', {method: 'POST'});
+    if (resp.ok) {
+        alert('Signing complete! Thank you.');
+        location.reload();
+    } else {
+        const err = await resp.json();
+        alert(err.detail?.errors?.join('\n') || err.detail || 'Error completing signing');
+    }
+}
+
+async function declineSigning() {
+    const reason = prompt('Please provide a reason for declining (optional):');
+    if (reason === null) return;
+    const resp = await fetch(API_BASE + '/decline?reason=' + encodeURIComponent(reason), {method: 'POST'});
+    if (resp.ok) {
+        alert('You have declined to sign this document.');
+        location.reload();
+    }
+}
+
+loadSession();
+</script>
+{% endblock %}

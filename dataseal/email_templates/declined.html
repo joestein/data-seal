@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; padding: 0; background-color: #f4f4f4; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .card { background: #ffffff; border-radius: 8px; padding: 32px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .header { text-align: center; margin-bottom: 24px; }
+        .header h1 { color: #d97706; font-size: 24px; margin: 0; }
+        .content { color: #374151; font-size: 15px; line-height: 1.6; }
+        .reason-box { background: #fffbeb; border-left: 4px solid #d97706; padding: 12px 16px; margin: 16px 0; border-radius: 0 4px 4px 0; }
+        .footer { text-align: center; color: #9ca3af; font-size: 12px; margin-top: 24px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="card">
+            <div class="header">
+                <div class="brand" style="color: #2563eb; font-size: 14px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px;">DataSeal</div>
+                <h1>Signing Declined</h1>
+            </div>
+            <div class="content">
+                <p>Hello,</p>
+                <p><strong>{{ recipient_name }}</strong> has declined to sign <strong>{{ envelope_title }}</strong>.</p>
+                {% if declined_reason %}
+                <div class="reason-box">
+                    <p style="margin: 0;"><strong>Reason:</strong> {{ declined_reason }}</p>
+                </div>
+                {% endif %}
+                <p>You may want to contact them directly to discuss or send a new envelope.</p>
+            </div>
+        </div>
+        <div class="footer">
+            <p>Powered by DataSeal | {{ app_url }}</p>
+        </div>
+    </div>
+</body>
+</html>

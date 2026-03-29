@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; padding: 0; background-color: #f4f4f4; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .card { background: #ffffff; border-radius: 8px; padding: 32px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .header { text-align: center; margin-bottom: 24px; }
+        .header h1 { color: #059669; font-size: 24px; margin: 0; }
+        .header .brand { color: #2563eb; font-size: 14px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; }
+        .content { color: #374151; font-size: 15px; line-height: 1.6; }
+        .btn { display: inline-block; background: #059669; color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 6px; font-size: 16px; font-weight: bold; margin: 24px 0; }
+        .footer { text-align: center; color: #9ca3af; font-size: 12px; margin-top: 24px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="card">
+            <div class="header">
+                <div class="brand">DataSeal</div>
+                <h1>Document Completed</h1>
+            </div>
+            <div class="content">
+                <p>Hello {{ recipient_name }},</p>
+                <p><strong>{{ envelope_title }}</strong> has been completed. All parties have signed the document.</p>
+                <p style="text-align: center;">
+                    <a href="{{ download_url }}" class="btn">Download Completed Document</a>
+                </p>
+                <p style="font-size: 13px; color: #6b7280;">
+                    The completed document includes a certificate of completion with tamper-evident hashes for verification.
+                </p>
+            </div>
+        </div>
+        <div class="footer">
+            <p>Powered by DataSeal | {{ app_url }}</p>
+        </div>
+    </div>
+</body>
+</html>

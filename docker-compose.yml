@@ -1,0 +1,95 @@
+services:
+  app:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://dataseal:dataseal@db:5432/dataseal
+      - DATABASE_URL_SYNC=postgresql://dataseal:dataseal@db:5432/dataseal
+      - REDIS_URL=redis://redis:6379/0
+      - SMTP_HOST=mailhog
+      - SMTP_PORT=1025
+      - SECRET_KEY=change-me-in-production-use-a-long-random-string
+      - STORAGE_LOCAL_PATH=/data/storage
+      - APP_URL=http://localhost:8000
+      - DEBUG=false
+    volumes:
+      - storage_data:/data/storage
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: >
+      sh -c "
+        python -m alembic upgrade head &&
+        uvicorn dataseal.main:app --host 0.0.0.0 --port 8000
+      "
+
+  celery-worker:
+    build: .
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://dataseal:dataseal@db:5432/dataseal
+      - DATABASE_URL_SYNC=postgresql://dataseal:dataseal@db:5432/dataseal
+      - REDIS_URL=redis://redis:6379/0
+      - SMTP_HOST=mailhog
+      - SMTP_PORT=1025
+      - SECRET_KEY=change-me-in-production-use-a-long-random-string
+      - STORAGE_LOCAL_PATH=/data/storage
+      - APP_URL=http://localhost:8000
+    volumes:
+      - storage_data:/data/storage
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: celery -A dataseal.tasks.celery_app worker --loglevel=info --concurrency=4 -Q celery,emails,documents,webhooks,finalize
+
+  celery-beat:
+    build: .
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+      - SECRET_KEY=change-me-in-production-use-a-long-random-string
+      - DATABASE_URL=postgresql+asyncpg://dataseal:dataseal@db:5432/dataseal
+      - DATABASE_URL_SYNC=postgresql://dataseal:dataseal@db:5432/dataseal
+    depends_on:
+      redis:
+        condition: service_healthy
+    command: celery -A dataseal.tasks.celery_app beat --loglevel=info
+
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: dataseal
+      POSTGRES_PASSWORD: dataseal
+      POSTGRES_DB: dataseal
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dataseal"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  mailhog:
+    image: mailhog/mailhog
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+
+volumes:
+  pg_data:
+  storage_data:

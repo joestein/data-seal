@@ -15,6 +15,7 @@ export function useProfile() {
 
 export function useLogin() {
   const { login, setTokens } = useAuthStore();
+  const { addToast } = useUiStore();
   return useMutation({
     mutationFn: async (data: UserLogin) => {
       const tokens = await authApi.login(data);
@@ -24,6 +25,12 @@ export function useLogin() {
     },
     onSuccess: ({ tokens, user }) => {
       login(tokens.access_token, tokens.refresh_token, user);
+    },
+    onError: (error: unknown) => {
+      const message =
+        (error as { response?: { data?: { detail?: string } } })?.response?.data?.detail ??
+        'Login failed. Please try again.';
+      addToast({ type: 'error', message });
     },
   });
 }

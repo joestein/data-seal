@@ -12,6 +12,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 COPY pyproject.toml .
+COPY dataseal/ dataseal/
+COPY alembic/ alembic/
+COPY alembic.ini .
 RUN pip install --no-cache-dir --prefix=/install .
 
 # Stage 2: Runtime

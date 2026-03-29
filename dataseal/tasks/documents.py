@@ -48,6 +48,6 @@ def render_document_pages(self, document_id: str) -> None:
 
     except Exception as exc:
         session.rollback()
-        raise self.retry(exc=exc)
+        raise self.retry(exc=exc) from exc
     finally:
         session.close()

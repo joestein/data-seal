@@ -6,20 +6,28 @@ import pytest
 @pytest.fixture
 def envelope(client, registered_user, auth_headers):
     """Create and return an envelope."""
-    response = client.post("/api/v1/envelopes", json={
-        "title": "Test Envelope",
-        "message": "Please sign this.",
-    }, headers=auth_headers)
+    response = client.post(
+        "/api/v1/envelopes",
+        json={
+            "title": "Test Envelope",
+            "message": "Please sign this.",
+        },
+        headers=auth_headers,
+    )
     assert response.status_code == 201
     return response.json()
 
 
 class TestCreateEnvelope:
     def test_create_envelope_success(self, client, registered_user, auth_headers):
-        response = client.post("/api/v1/envelopes", json={
-            "title": "My Document",
-            "message": "Please sign",
-        }, headers=auth_headers)
+        response = client.post(
+            "/api/v1/envelopes",
+            json={
+                "title": "My Document",
+                "message": "Please sign",
+            },
+            headers=auth_headers,
+        )
         assert response.status_code == 201
         data = response.json()
         assert data["title"] == "My Document"
@@ -27,9 +35,13 @@ class TestCreateEnvelope:
         assert "id" in data
 
     def test_create_envelope_without_message(self, client, registered_user, auth_headers):
-        response = client.post("/api/v1/envelopes", json={
-            "title": "No Message",
-        }, headers=auth_headers)
+        response = client.post(
+            "/api/v1/envelopes",
+            json={
+                "title": "No Message",
+            },
+            headers=auth_headers,
+        )
         assert response.status_code == 201
         assert response.json()["message"] is None
 
@@ -107,7 +119,14 @@ class TestGetEnvelope:
         )
         assert response.status_code == 404
 
-    def test_get_envelope_other_user_returns_404(self, client, registered_user, auth_headers, envelope, second_user_auth):
+    def test_get_envelope_other_user_returns_404(
+        self,
+        client,
+        registered_user,
+        auth_headers,
+        envelope,
+        second_user_auth,
+    ):
         response = client.get(f"/api/v1/envelopes/{envelope['id']}", headers=second_user_auth)
         assert response.status_code == 404
 
@@ -157,7 +176,14 @@ class TestDeleteEnvelope:
         )
         assert response.status_code == 404
 
-    def test_delete_other_users_envelope_returns_404(self, client, registered_user, auth_headers, envelope, second_user_auth):
+    def test_delete_other_users_envelope_returns_404(
+        self,
+        client,
+        registered_user,
+        auth_headers,
+        envelope,
+        second_user_auth,
+    ):
         response = client.delete(f"/api/v1/envelopes/{envelope['id']}", headers=second_user_auth)
         assert response.status_code == 404
 
@@ -192,9 +218,7 @@ class TestVoidEnvelope:
 
     def test_void_completed_envelope_returns_400(self, client, registered_user, auth_headers, db_session):
         # Create an envelope and force-set it to completed via DB
-        create_response = client.post(
-            "/api/v1/envelopes", json={"title": "Completed Env"}, headers=auth_headers
-        )
+        create_response = client.post("/api/v1/envelopes", json={"title": "Completed Env"}, headers=auth_headers)
         env_id = create_response.json()["id"]
 
         # Directly update via API - we can't easily set completed status via normal flow,

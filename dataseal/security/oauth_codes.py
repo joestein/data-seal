@@ -7,7 +7,7 @@ Replaces the in-memory dict with Valkey to provide:
 """
 
 import json
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 
 import valkey
 
@@ -20,7 +20,7 @@ _AUTH_CODE_TTL_SECONDS = 600  # 10 minutes
 
 
 def _get_valkey() -> valkey.Valkey:
-    global _valkey_client
+    global _valkey_client  # noqa: PLW0603
     if _valkey_client is None:
         _valkey_client = valkey.from_url(settings.valkey_url, decode_responses=True)
     return _valkey_client

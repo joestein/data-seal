@@ -2,6 +2,7 @@
 
 import uuid
 from datetime import datetime
+from typing import ClassVar
 
 from sqlalchemy import DateTime, ForeignKey, Index, String, Text
 from sqlalchemy.dialects.postgresql import UUID
@@ -24,29 +25,17 @@ class Envelope(Base, UUIDMixin, TimestampMixin):
     )
     title: Mapped[str] = mapped_column(String(500), nullable=False)
     message: Mapped[str | None] = mapped_column(Text, nullable=True)
-    status: Mapped[str] = mapped_column(
-        String(20), nullable=False, default="created"
-    )
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default="created")
     voided_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
-    expires_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
-    completed_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
+    expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     completed_hash: Mapped[str | None] = mapped_column(String(128), nullable=True)
 
     # Relationships
     user = relationship("User", back_populates="envelopes")
-    documents = relationship(
-        "Document", back_populates="envelope", cascade="all, delete-orphan", lazy="selectin"
-    )
-    recipients = relationship(
-        "Recipient", back_populates="envelope", cascade="all, delete-orphan", lazy="selectin"
-    )
-    audit_events = relationship(
-        "AuditEvent", back_populates="envelope", cascade="all, delete-orphan", lazy="noload"
-    )
+    documents = relationship("Document", back_populates="envelope", cascade="all, delete-orphan", lazy="selectin")
+    recipients = relationship("Recipient", back_populates="envelope", cascade="all, delete-orphan", lazy="selectin")
+    audit_events = relationship("AuditEvent", back_populates="envelope", cascade="all, delete-orphan", lazy="noload")
 
     __table_args__ = (
         Index("idx_envelopes_user_id", "user_id"),
@@ -54,9 +43,9 @@ class Envelope(Base, UUIDMixin, TimestampMixin):
         Index("idx_envelopes_created_at", "created_at"),
     )
 
-    VALID_STATUSES = {"created", "sent", "delivered", "signed", "completed", "voided", "declined"}
+    VALID_STATUSES: ClassVar[set[str]] = {"created", "sent", "delivered", "signed", "completed", "voided", "declined"}
 
-    ALLOWED_TRANSITIONS = {
+    ALLOWED_TRANSITIONS: ClassVar[dict[str, set[str]]] = {
         "created": {"sent", "voided"},
         "sent": {"delivered", "voided", "declined"},
         "delivered": {"signed", "voided", "declined"},

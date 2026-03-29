@@ -17,7 +17,7 @@ _fernet_instance: Fernet | None = None
 
 def _get_fernet() -> Fernet:
     """Get or create a Fernet instance using a key derived from SECRET_KEY."""
-    global _fernet_instance
+    global _fernet_instance  # noqa: PLW0603
     if _fernet_instance is None:
         # Derive a 32-byte key from SECRET_KEY using SHA-256, then base64 encode
         # for Fernet (which requires a 32-byte URL-safe base64-encoded key)
@@ -55,5 +55,5 @@ def decrypt_value(ciphertext: str) -> str:
     f = _get_fernet()
     try:
         return f.decrypt(ciphertext.encode("utf-8")).decode("utf-8")
-    except InvalidToken:
-        raise ValueError("Cannot decrypt value: invalid token or wrong key")
+    except InvalidToken as err:
+        raise ValueError("Cannot decrypt value: invalid token or wrong key") from err

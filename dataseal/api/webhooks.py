@@ -12,14 +12,14 @@ from dataseal.api.deps import get_current_user, require_scope
 from dataseal.database import get_db
 from dataseal.models.user import User
 from dataseal.models.webhook import WebhookDelivery, WebhookEndpoint
-from dataseal.security.encryption import encrypt_value
-from dataseal.security.url_validation import SSRFError, validate_webhook_url
 from dataseal.schemas.webhook import (
     WebhookCreate,
     WebhookDeliveryResponse,
     WebhookResponse,
     WebhookUpdate,
 )
+from dataseal.security.encryption import encrypt_value
+from dataseal.security.url_validation import SSRFError, validate_webhook_url
 
 router = APIRouter(prefix="/webhooks", tags=["webhooks"])
 
@@ -57,7 +57,7 @@ async def create_webhook(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Invalid webhook URL: {e}",
-        )
+        ) from e
 
     # Validate events
     for event in data.events:
@@ -139,7 +139,7 @@ async def update_webhook(
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"Invalid webhook URL: {e}",
-            )
+            ) from e
         webhook.url = data.url
     if data.events is not None:
         for event in data.events:
@@ -178,7 +178,6 @@ async def delete_webhook(
 
     await db.delete(webhook)
     await db.flush()
-    return None
 
 
 @router.get("/{webhook_id}/deliveries", response_model=list[WebhookDeliveryResponse])
@@ -245,6 +244,7 @@ async def test_webhook(
     await db.flush()
 
     from dataseal.tasks.webhooks import deliver_webhook
+
     deliver_webhook.delay(str(delivery.id))
 
     return {"message": "Test webhook delivery enqueued", "delivery_id": str(delivery.id)}

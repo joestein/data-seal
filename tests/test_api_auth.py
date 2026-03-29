@@ -1,15 +1,16 @@
 """API tests for authentication endpoints."""
 
-import pytest
-
 
 class TestRegister:
     def test_register_success(self, client):
-        response = client.post("/api/v1/auth/register", json={
-            "email": "newuser@example.com",
-            "password": "Password123!",
-            "full_name": "New User",
-        })
+        response = client.post(
+            "/api/v1/auth/register",
+            json={
+                "email": "newuser@example.com",
+                "password": "Password123!",
+                "full_name": "New User",
+            },
+        )
         assert response.status_code == 201
         data = response.json()
         assert data["email"] == "newuser@example.com"
@@ -18,12 +19,15 @@ class TestRegister:
         assert "password_hash" not in data
 
     def test_register_with_company(self, client):
-        response = client.post("/api/v1/auth/register", json={
-            "email": "corp@example.com",
-            "password": "Password123!",
-            "full_name": "Corp User",
-            "company": "Acme Inc",
-        })
+        response = client.post(
+            "/api/v1/auth/register",
+            json={
+                "email": "corp@example.com",
+                "password": "Password123!",
+                "full_name": "Corp User",
+                "company": "Acme Inc",
+            },
+        )
         assert response.status_code == 201
         assert response.json()["company"] == "Acme Inc"
 
@@ -38,42 +42,57 @@ class TestRegister:
         assert response.status_code == 409
 
     def test_register_invalid_email_returns_422(self, client):
-        response = client.post("/api/v1/auth/register", json={
-            "email": "not-an-email",
-            "password": "Password123!",
-            "full_name": "Bad Email",
-        })
+        response = client.post(
+            "/api/v1/auth/register",
+            json={
+                "email": "not-an-email",
+                "password": "Password123!",
+                "full_name": "Bad Email",
+            },
+        )
         assert response.status_code == 422
 
     def test_register_short_password_returns_422(self, client):
-        response = client.post("/api/v1/auth/register", json={
-            "email": "short@example.com",
-            "password": "abc",
-            "full_name": "Short Pass",
-        })
+        response = client.post(
+            "/api/v1/auth/register",
+            json={
+                "email": "short@example.com",
+                "password": "abc",
+                "full_name": "Short Pass",
+            },
+        )
         assert response.status_code == 422
 
     def test_register_empty_full_name_returns_422(self, client):
-        response = client.post("/api/v1/auth/register", json={
-            "email": "empty@example.com",
-            "password": "Password123!",
-            "full_name": "",
-        })
+        response = client.post(
+            "/api/v1/auth/register",
+            json={
+                "email": "empty@example.com",
+                "password": "Password123!",
+                "full_name": "",
+            },
+        )
         assert response.status_code == 422
 
     def test_register_missing_fields_returns_422(self, client):
-        response = client.post("/api/v1/auth/register", json={
-            "email": "missing@example.com",
-        })
+        response = client.post(
+            "/api/v1/auth/register",
+            json={
+                "email": "missing@example.com",
+            },
+        )
         assert response.status_code == 422
 
 
 class TestLogin:
     def test_login_success(self, client, registered_user):
-        response = client.post("/api/v1/auth/login", json={
-            "email": "testuser@example.com",
-            "password": "TestPass123!",
-        })
+        response = client.post(
+            "/api/v1/auth/login",
+            json={
+                "email": "testuser@example.com",
+                "password": "TestPass123!",
+            },
+        )
         assert response.status_code == 200
         data = response.json()
         assert "access_token" in data
@@ -82,33 +101,45 @@ class TestLogin:
         assert data["expires_in"] > 0
 
     def test_login_wrong_password_returns_401(self, client, registered_user):
-        response = client.post("/api/v1/auth/login", json={
-            "email": "testuser@example.com",
-            "password": "WrongPassword!",
-        })
+        response = client.post(
+            "/api/v1/auth/login",
+            json={
+                "email": "testuser@example.com",
+                "password": "WrongPassword!",
+            },
+        )
         assert response.status_code == 401
 
     def test_login_unknown_email_returns_401(self, client):
-        response = client.post("/api/v1/auth/login", json={
-            "email": "ghost@example.com",
-            "password": "Password123!",
-        })
+        response = client.post(
+            "/api/v1/auth/login",
+            json={
+                "email": "ghost@example.com",
+                "password": "Password123!",
+            },
+        )
         assert response.status_code == 401
 
     def test_login_invalid_email_format_returns_422(self, client):
-        response = client.post("/api/v1/auth/login", json={
-            "email": "not-valid",
-            "password": "Password123!",
-        })
+        response = client.post(
+            "/api/v1/auth/login",
+            json={
+                "email": "not-valid",
+                "password": "Password123!",
+            },
+        )
         assert response.status_code == 422
 
 
 class TestRefreshToken:
     def test_refresh_token_returns_new_tokens(self, client, registered_user):
-        login_response = client.post("/api/v1/auth/login", json={
-            "email": "testuser@example.com",
-            "password": "TestPass123!",
-        })
+        login_response = client.post(
+            "/api/v1/auth/login",
+            json={
+                "email": "testuser@example.com",
+                "password": "TestPass123!",
+            },
+        )
         refresh_token = login_response.json()["refresh_token"]
 
         response = client.post("/api/v1/auth/refresh", json={"refresh_token": refresh_token})
@@ -177,9 +208,7 @@ class TestApiKeys:
         assert len(response.json()) >= 2
 
     def test_revoke_api_key(self, client, registered_user, auth_headers):
-        create_response = client.post(
-            "/api/v1/auth/api-keys", json={"name": "Revoke Me"}, headers=auth_headers
-        )
+        create_response = client.post("/api/v1/auth/api-keys", json={"name": "Revoke Me"}, headers=auth_headers)
         key_id = create_response.json()["id"]
         response = client.delete(f"/api/v1/auth/api-keys/{key_id}", headers=auth_headers)
         assert response.status_code == 204
@@ -193,18 +222,14 @@ class TestApiKeys:
 
     def test_cannot_revoke_other_users_key(self, client, registered_user, auth_headers, second_user_auth):
         # Create key as first user
-        create_response = client.post(
-            "/api/v1/auth/api-keys", json={"name": "First User Key"}, headers=auth_headers
-        )
+        create_response = client.post("/api/v1/auth/api-keys", json={"name": "First User Key"}, headers=auth_headers)
         key_id = create_response.json()["id"]
         # Try to revoke as second user
         response = client.delete(f"/api/v1/auth/api-keys/{key_id}", headers=second_user_auth)
         assert response.status_code == 404
 
     def test_api_key_auth_works(self, client, registered_user, auth_headers):
-        create_response = client.post(
-            "/api/v1/auth/api-keys", json={"name": "API Auth Key"}, headers=auth_headers
-        )
+        create_response = client.post("/api/v1/auth/api-keys", json={"name": "API Auth Key"}, headers=auth_headers)
         raw_key = create_response.json()["key"]
         response = client.get("/api/v1/auth/me", headers={"Authorization": f"Bearer {raw_key}"})
         assert response.status_code == 200

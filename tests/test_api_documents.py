@@ -5,9 +5,11 @@ from unittest.mock import patch
 
 import pytest
 
-
 # Minimal valid PDF bytes (magic bytes + minimal structure)
-MINIMAL_PDF = b"%PDF-1.4\n1 0 obj\n<</Type /Catalog>>\nendobj\nxref\n0 1\n0000000000 65535 f \ntrailer\n<</Size 1>>\nstartxref\n9\n%%EOF"
+MINIMAL_PDF = (
+    b"%PDF-1.4\n1 0 obj\n<</Type /Catalog>>\nendobj\n"
+    b"xref\n0 1\n0000000000 65535 f \ntrailer\n<</Size 1>>\nstartxref\n9\n%%EOF"
+)
 
 FAKE_NON_PDF = b"This is not a PDF file, just plain text."
 
@@ -84,7 +86,14 @@ class TestDocumentUpload:
             )
         assert response.status_code == 404
 
-    def test_upload_to_other_users_envelope_returns_404(self, client, registered_user, auth_headers, envelope, second_user_auth):
+    def test_upload_to_other_users_envelope_returns_404(
+        self,
+        client,
+        registered_user,
+        auth_headers,
+        envelope,
+        second_user_auth,
+    ):
         response = client.post(
             f"/api/v1/envelopes/{envelope['id']}/documents",
             files={"file": ("test.pdf", io.BytesIO(MINIMAL_PDF), "application/pdf")},

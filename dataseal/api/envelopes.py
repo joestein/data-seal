@@ -141,7 +141,6 @@ async def delete_envelope(
         )
     await db.delete(envelope)
     await db.flush()
-    return None
 
 
 @router.post(
@@ -253,6 +252,7 @@ async def resend_envelope(
     await db.flush()
 
     from dataseal.tasks.emails import send_signing_emails
+
     send_signing_emails.delay(str(envelope.id))
 
     return SendResponse(
@@ -268,9 +268,7 @@ async def get_audit_trail(
     db: AsyncSession = Depends(get_db),
 ):
     result = await db.execute(
-        select(AuditEvent)
-        .where(AuditEvent.envelope_id == envelope.id)
-        .order_by(AuditEvent.created_at)
+        select(AuditEvent).where(AuditEvent.envelope_id == envelope.id).order_by(AuditEvent.created_at)
     )
     events = result.scalars().all()
 

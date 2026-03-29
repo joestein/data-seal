@@ -14,19 +14,11 @@ from dataseal.models.field import DocumentField
 from dataseal.models.recipient import Recipient
 from dataseal.schemas.field import FieldCreate, FieldResponse, FieldUpdate
 
-router = APIRouter(
-    prefix="/envelopes/{envelope_id}/documents/{doc_id}/fields", tags=["fields"]
-)
+router = APIRouter(prefix="/envelopes/{envelope_id}/documents/{doc_id}/fields", tags=["fields"])
 
 
-async def _get_document(
-    envelope_id: uuid.UUID, doc_id: uuid.UUID, db: AsyncSession
-) -> Document:
-    result = await db.execute(
-        select(Document).where(
-            Document.id == doc_id, Document.envelope_id == envelope_id
-        )
-    )
+async def _get_document(envelope_id: uuid.UUID, doc_id: uuid.UUID, db: AsyncSession) -> Document:
+    result = await db.execute(select(Document).where(Document.id == doc_id, Document.envelope_id == envelope_id))
     doc = result.scalar_one_or_none()
     if not doc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document not found")
@@ -120,15 +112,23 @@ async def update_field(
         )
 
     result = await db.execute(
-        select(DocumentField).where(
-            DocumentField.id == field_id, DocumentField.document_id == doc_id
-        )
+        select(DocumentField).where(DocumentField.id == field_id, DocumentField.document_id == doc_id)
     )
     field = result.scalar_one_or_none()
     if not field:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Field not found")
 
-    for attr in ("page_number", "x_position", "y_position", "width", "height", "is_required", "placeholder", "validation_rule", "dropdown_options"):
+    for attr in (
+        "page_number",
+        "x_position",
+        "y_position",
+        "width",
+        "height",
+        "is_required",
+        "placeholder",
+        "validation_rule",
+        "dropdown_options",
+    ):
         val = getattr(data, attr, None)
         if val is not None:
             setattr(field, attr, val)
@@ -152,9 +152,7 @@ async def delete_field(
         )
 
     result = await db.execute(
-        select(DocumentField).where(
-            DocumentField.id == field_id, DocumentField.document_id == doc_id
-        )
+        select(DocumentField).where(DocumentField.id == field_id, DocumentField.document_id == doc_id)
     )
     field = result.scalar_one_or_none()
     if not field:
@@ -162,4 +160,3 @@ async def delete_field(
 
     await db.delete(field)
     await db.flush()
-    return None

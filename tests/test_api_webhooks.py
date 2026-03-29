@@ -6,22 +6,30 @@ import pytest
 @pytest.fixture
 def webhook(client, registered_user, auth_headers):
     """Create and return a webhook endpoint."""
-    response = client.post("/api/v1/webhooks", json={
-        "url": "https://example.com/webhook",
-        "events": ["envelope.sent", "envelope.completed"],
-        "is_active": True,
-    }, headers=auth_headers)
+    response = client.post(
+        "/api/v1/webhooks",
+        json={
+            "url": "https://example.com/webhook",
+            "events": ["envelope.sent", "envelope.completed"],
+            "is_active": True,
+        },
+        headers=auth_headers,
+    )
     assert response.status_code == 201
     return response.json()
 
 
 class TestWebhookCRUD:
     def test_create_webhook_success(self, client, registered_user, auth_headers):
-        response = client.post("/api/v1/webhooks", json={
-            "url": "https://example.com/hook",
-            "events": ["envelope.sent"],
-            "is_active": True,
-        }, headers=auth_headers)
+        response = client.post(
+            "/api/v1/webhooks",
+            json={
+                "url": "https://example.com/hook",
+                "events": ["envelope.sent"],
+                "is_active": True,
+            },
+            headers=auth_headers,
+        )
         assert response.status_code == 201
         data = response.json()
         assert data["url"] == "https://example.com/hook"
@@ -31,24 +39,35 @@ class TestWebhookCRUD:
         assert data["is_active"] is True
 
     def test_create_webhook_with_wildcard_event(self, client, registered_user, auth_headers):
-        response = client.post("/api/v1/webhooks", json={
-            "url": "https://example.com/all",
-            "events": ["*"],
-        }, headers=auth_headers)
+        response = client.post(
+            "/api/v1/webhooks",
+            json={
+                "url": "https://example.com/all",
+                "events": ["*"],
+            },
+            headers=auth_headers,
+        )
         assert response.status_code == 201
 
     def test_create_webhook_invalid_event_returns_400(self, client, registered_user, auth_headers):
-        response = client.post("/api/v1/webhooks", json={
-            "url": "https://example.com/hook",
-            "events": ["invalid.event"],
-        }, headers=auth_headers)
+        response = client.post(
+            "/api/v1/webhooks",
+            json={
+                "url": "https://example.com/hook",
+                "events": ["invalid.event"],
+            },
+            headers=auth_headers,
+        )
         assert response.status_code == 400
 
     def test_create_webhook_unauthenticated_returns_401(self, client):
-        response = client.post("/api/v1/webhooks", json={
-            "url": "https://example.com/hook",
-            "events": ["*"],
-        })
+        response = client.post(
+            "/api/v1/webhooks",
+            json={
+                "url": "https://example.com/hook",
+                "events": ["*"],
+            },
+        )
         assert response.status_code == 401
 
     def test_list_webhooks(self, client, registered_user, auth_headers, webhook):
@@ -77,7 +96,14 @@ class TestWebhookCRUD:
         )
         assert response.status_code == 404
 
-    def test_get_other_users_webhook_returns_404(self, client, registered_user, auth_headers, webhook, second_user_auth):
+    def test_get_other_users_webhook_returns_404(
+        self,
+        client,
+        registered_user,
+        auth_headers,
+        webhook,
+        second_user_auth,
+    ):
         response = client.get(f"/api/v1/webhooks/{webhook['id']}", headers=second_user_auth)
         assert response.status_code == 404
 
@@ -130,7 +156,14 @@ class TestWebhookCRUD:
         )
         assert response.status_code == 404
 
-    def test_delete_other_users_webhook_returns_404(self, client, registered_user, auth_headers, webhook, second_user_auth):
+    def test_delete_other_users_webhook_returns_404(
+        self,
+        client,
+        registered_user,
+        auth_headers,
+        webhook,
+        second_user_auth,
+    ):
         response = client.delete(f"/api/v1/webhooks/{webhook['id']}", headers=second_user_auth)
         assert response.status_code == 404
 

@@ -1,7 +1,5 @@
 """Unit tests for Envelope status transition logic."""
 
-import pytest
-
 from dataseal.models.envelope import Envelope
 
 
@@ -113,4 +111,4 @@ class TestEnvelopeStatusTransitions:
 
     def test_valid_statuses_contains_all_expected(self):
         expected = {"created", "sent", "delivered", "signed", "completed", "voided", "declined"}
-        assert Envelope.VALID_STATUSES == expected
+        assert expected == Envelope.VALID_STATUSES

@@ -69,16 +69,20 @@ select = [
     "RUF", # ruff-specific rules
 ]
 ignore = [
-    "S101",   # assert statements (used in tests)
-    "S105",   # hardcoded-password-string (false positives in tests/config)
-    "S106",   # hardcoded-password-func-arg (false positives in tests)
-    "S311",   # pseudo-random (non-crypto random is acceptable in non-security contexts)
+    "B008",    # function-call-in-default-argument (standard FastAPI Depends() pattern)
+    "S101",    # assert statements (used in tests)
+    "S105",    # hardcoded-password-string (false positives in tests/config)
+    "S106",    # hardcoded-password-func-arg (false positives in tests)
+    "S311",    # pseudo-random (non-crypto random is acceptable in non-security contexts)
+    "PLC0415", # import-outside-top-level (FastAPI/Celery lazy imports are intentional)
     "PLR0913", # too-many-arguments (FastAPI routes often have many parameters)
+    "PLR0912", # too-many-branches
+    "PLR0915", # too-many-statements
     "PLR2004", # magic-value-comparison (too noisy)
-    "RET504", # unnecessary-assign-before-return
-    "ERA001", # commented-out-code (too aggressive)
+    "RET504",  # unnecessary-assign-before-return
+    "ERA001",  # commented-out-code (too aggressive)
 ]
-per-file-ignores = { "tests/**" = ["S", "PLR", "T20"], "alembic/**" = ["ERA001"] }
+per-file-ignores = { "tests/**" = ["S", "PLR", "T20", "F841"], "alembic/**" = ["ERA001", "UP"] }
 
 [tool.ruff.lint.isort]
 known-first-party = ["dataseal"]

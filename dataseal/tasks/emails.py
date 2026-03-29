@@ -87,7 +87,7 @@ def send_signing_emails(self, envelope_id: str) -> None:
                     html,
                 )
             except Exception as exc:
-                raise self.retry(exc=exc)
+                raise self.retry(exc=exc) from exc
 
     finally:
         session.close()
@@ -105,13 +105,7 @@ def send_completion_emails(self, envelope_id: str) -> None:
         template = _jinja_env.get_template("completed.html")
         download_url = f"{settings.app_url}/api/v1/envelopes/{envelope_id}/combined"
 
-        recipients = (
-            session.execute(
-                select(Recipient).where(Recipient.envelope_id == envelope_id)
-            )
-            .scalars()
-            .all()
-        )
+        recipients = session.execute(select(Recipient).where(Recipient.envelope_id == envelope_id)).scalars().all()
 
         for recipient in recipients:
             html = template.render(
@@ -127,7 +121,7 @@ def send_completion_emails(self, envelope_id: str) -> None:
                     html,
                 )
             except Exception as exc:
-                raise self.retry(exc=exc)
+                raise self.retry(exc=exc) from exc
 
     finally:
         session.close()
@@ -144,13 +138,7 @@ def send_void_notification(self, envelope_id: str) -> None:
 
         template = _jinja_env.get_template("voided.html")
 
-        recipients = (
-            session.execute(
-                select(Recipient).where(Recipient.envelope_id == envelope_id)
-            )
-            .scalars()
-            .all()
-        )
+        recipients = session.execute(select(Recipient).where(Recipient.envelope_id == envelope_id)).scalars().all()
 
         for recipient in recipients:
             html = template.render(
@@ -166,7 +154,7 @@ def send_void_notification(self, envelope_id: str) -> None:
                     html,
                 )
             except Exception as exc:
-                raise self.retry(exc=exc)
+                raise self.retry(exc=exc) from exc
 
     finally:
         session.close()
@@ -202,6 +190,6 @@ def send_decline_notification(self, envelope_id: str, recipient_id: str) -> None
             )
 
     except Exception as exc:
-        raise self.retry(exc=exc)
+        raise self.retry(exc=exc) from exc
     finally:
         session.close()

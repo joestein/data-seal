@@ -1,5 +1,6 @@
 """Storage backend abstraction."""
 
+import contextlib
 import os
 from abc import ABC, abstractmethod
 from pathlib import Path
@@ -13,24 +14,19 @@ class StorageBackend(ABC):
     """Abstract storage backend for file operations."""
 
     @abstractmethod
-    async def save(self, path: str, data: bytes) -> None:
-        ...
+    async def save(self, path: str, data: bytes) -> None: ...
 
     @abstractmethod
-    async def load(self, path: str) -> bytes:
-        ...
+    async def load(self, path: str) -> bytes: ...
 
     @abstractmethod
-    async def delete(self, path: str) -> None:
-        ...
+    async def delete(self, path: str) -> None: ...
 
     @abstractmethod
-    async def exists(self, path: str) -> bool:
-        ...
+    async def exists(self, path: str) -> bool: ...
 
     @abstractmethod
-    async def get_url(self, path: str, expires_in: int = 3600) -> str:
-        ...
+    async def get_url(self, path: str, expires_in: int = 3600) -> str: ...
 
 
 class LocalStorageBackend(StorageBackend):
@@ -38,11 +34,8 @@ class LocalStorageBackend(StorageBackend):
 
     def __init__(self, base_path: str | None = None):
         self.base_path = Path(base_path or settings.storage_local_path)
-        try:
+        with contextlib.suppress(OSError):
             self.base_path.mkdir(parents=True, exist_ok=True)
-        except OSError:
-            # May fail outside Docker; directory will be created on first write
-            pass
 
     def _full_path(self, path: str) -> Path:
         # Prevent path traversal

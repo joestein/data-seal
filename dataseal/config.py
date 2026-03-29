@@ -3,16 +3,18 @@
 from pydantic import field_validator
 from pydantic_settings import BaseSettings
 
-_WEAK_SECRET_KEYS = frozenset({
-    "change-me-in-production",
-    "secret",
-    "secret_key",
-    "changeme",
-    "password",
-    "test",
-    "development",
-    "default",
-})
+_WEAK_SECRET_KEYS = frozenset(
+    {
+        "change-me-in-production",
+        "secret",
+        "secret_key",
+        "changeme",
+        "password",
+        "test",
+        "development",
+        "default",
+    }
+)
 
 
 class Settings(BaseSettings):
@@ -31,12 +33,10 @@ class Settings(BaseSettings):
         if v.lower() in _WEAK_SECRET_KEYS:
             raise ValueError(
                 f"SECRET_KEY is set to a known weak value ('{v}'). "
-                "Generate a strong random key, e.g.: python -c \"import secrets; print(secrets.token_urlsafe(64))\""
+                'Generate a strong random key, e.g.: python -c "import secrets; print(secrets.token_urlsafe(64))"'
             )
         if len(v) < 32:
-            raise ValueError(
-                "SECRET_KEY must be at least 32 characters long for adequate security"
-            )
+            raise ValueError("SECRET_KEY must be at least 32 characters long for adequate security")
         return v
 
     # Database

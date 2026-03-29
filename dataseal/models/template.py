@@ -62,9 +62,7 @@ class TemplateDocument(Base, UUIDMixin):
     size_bytes: Mapped[int] = mapped_column(BigInteger, nullable=False)
     page_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     display_order: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now(), nullable=False
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
     # Relationships
     template = relationship("Template", back_populates="documents")
@@ -87,9 +85,7 @@ class TemplateRecipient(Base, UUIDMixin):
     role_name: Mapped[str] = mapped_column(String(100), nullable=False)
     role: Mapped[str] = mapped_column(String(20), nullable=False, default="signer")
     routing_order: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now(), nullable=False
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
     # Relationships
     template = relationship("Template", back_populates="recipients")
@@ -116,13 +112,9 @@ class TemplateField(Base, UUIDMixin):
     placeholder: Mapped[str | None] = mapped_column(String(255), nullable=True)
     validation_rule: Mapped[str | None] = mapped_column(String(255), nullable=True)
     dropdown_options: Mapped[list | None] = mapped_column(JSONB, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now(), nullable=False
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
     # Relationships
     template_document = relationship("TemplateDocument", back_populates="fields")
 
-    __table_args__ = (
-        Index("idx_template_fields_template_document_id", "template_document_id"),
-    )
+    __table_args__ = (Index("idx_template_fields_template_document_id", "template_document_id"),)

@@ -29,9 +29,7 @@ from dataseal.services.signing import (
 router = APIRouter(prefix="/signing", tags=["signing"])
 
 
-async def _get_authenticated_recipient(
-    token: str, db: AsyncSession, request: Request | None = None
-) -> Recipient:
+async def _get_authenticated_recipient(token: str, db: AsyncSession, request: Request | None = None) -> Recipient:
     """Validate signing token and return the recipient."""
     recipient = await get_recipient_by_token(db, token)
     if not recipient:
@@ -80,34 +78,38 @@ async def get_signing_session(
 
         pages = []
         for i in range(1, doc.page_count + 1):
-            pages.append({
-                "page_number": i,
-                "image_url": f"/api/v1/signing/{token}/documents/{doc.id}/pages/{i}",
-            })
-
-        documents_data.append({
-            "id": str(doc.id),
-            "filename": doc.filename,
-            "page_count": doc.page_count,
-            "pages": pages,
-            "fields": [
+            pages.append(
                 {
-                    "id": str(f.id),
-                    "type": f.type,
-                    "page_number": f.page_number,
-                    "x_position": f.x_position,
-                    "y_position": f.y_position,
-                    "width": f.width,
-                    "height": f.height,
-                    "is_required": f.is_required,
-                    "placeholder": f.placeholder,
-                    "dropdown_options": f.dropdown_options,
-                    "value": f.value,
-                    "completed_at": f.completed_at.isoformat() if f.completed_at else None,
+                    "page_number": i,
+                    "image_url": f"/api/v1/signing/{token}/documents/{doc.id}/pages/{i}",
                 }
-                for f in fields
-            ],
-        })
+            )
+
+        documents_data.append(
+            {
+                "id": str(doc.id),
+                "filename": doc.filename,
+                "page_count": doc.page_count,
+                "pages": pages,
+                "fields": [
+                    {
+                        "id": str(f.id),
+                        "type": f.type,
+                        "page_number": f.page_number,
+                        "x_position": f.x_position,
+                        "y_position": f.y_position,
+                        "width": f.width,
+                        "height": f.height,
+                        "is_required": f.is_required,
+                        "placeholder": f.placeholder,
+                        "dropdown_options": f.dropdown_options,
+                        "value": f.value,
+                        "completed_at": f.completed_at.isoformat() if f.completed_at else None,
+                    }
+                    for f in fields
+                ],
+            }
+        )
 
     return {
         "envelope": {
@@ -178,8 +180,7 @@ async def get_signing_page_image(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Page not found")
 
     page_path = (
-        Path(settings.storage_local_path)
-        / f"documents/{recipient.envelope_id}/{doc_id}/pages/page_{page_number}.png"
+        Path(settings.storage_local_path) / f"documents/{recipient.envelope_id}/{doc_id}/pages/page_{page_number}.png"
     )
     if not page_path.exists():
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Page image not found")
@@ -216,7 +217,7 @@ async def submit_field_value(
     try:
         field = await update_field_value(db, field, data.value, recipient, ip, ua)
     except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
 
     return field
 
@@ -233,15 +234,11 @@ async def complete_signing_endpoint(
     ua = request.headers.get("User-Agent")
 
     # Reload recipient with fields
-    result = await db.execute(
-        select(Recipient).where(Recipient.id == recipient.id)
-    )
+    result = await db.execute(select(Recipient).where(Recipient.id == recipient.id))
     recipient = result.scalar_one()
 
     # Load fields for this recipient
-    fields_result = await db.execute(
-        select(DocumentField).where(DocumentField.recipient_id == recipient.id)
-    )
+    fields_result = await db.execute(select(DocumentField).where(DocumentField.recipient_id == recipient.id))
     # Attach fields to recipient for validation
     recipient.fields = fields_result.scalars().all()
 
@@ -255,17 +252,13 @@ async def complete_signing_endpoint(
     # Check if envelope is complete
     from sqlalchemy.orm import selectinload
 
-    envelope_result = await db.execute(
-        select(Recipient.envelope_id).where(Recipient.id == recipient.id)
-    )
+    envelope_result = await db.execute(select(Recipient.envelope_id).where(Recipient.id == recipient.id))
     envelope_id = envelope_result.scalar_one()
 
     from dataseal.models.envelope import Envelope
 
     env_result = await db.execute(
-        select(Envelope)
-        .options(selectinload(Envelope.recipients))
-        .where(Envelope.id == envelope_id)
+        select(Envelope).options(selectinload(Envelope.recipients)).where(Envelope.id == envelope_id)
     )
     envelope = env_result.scalar_one()
 
@@ -273,6 +266,7 @@ async def complete_signing_endpoint(
 
     if is_complete:
         from dataseal.tasks.finalize import finalize_envelope
+
         finalize_envelope.delay(str(envelope.id))
 
     # Invalidate the signing token

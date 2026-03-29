@@ -22,14 +22,10 @@ class Document(Base, UUIDMixin):
     size_bytes: Mapped[int] = mapped_column(BigInteger, nullable=False)
     page_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     display_order: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now(), nullable=False
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
     # Relationships
     envelope = relationship("Envelope", back_populates="documents")
-    fields = relationship(
-        "DocumentField", back_populates="document", cascade="all, delete-orphan", lazy="selectin"
-    )
+    fields = relationship("DocumentField", back_populates="document", cascade="all, delete-orphan", lazy="selectin")
 
     __table_args__ = (Index("idx_documents_envelope_id", "envelope_id"),)

@@ -3,7 +3,7 @@
 import pytest
 from pydantic import ValidationError
 
-from dataseal.schemas.field import FieldCreate, FieldUpdate, FieldValueUpdate
+from dataseal.schemas.field import FieldCreate, FieldValueUpdate
 
 
 class TestFieldCreateValidation:

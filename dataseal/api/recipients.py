@@ -73,9 +73,7 @@ async def update_recipient(
         )
 
     result = await db.execute(
-        select(Recipient).where(
-            Recipient.id == recipient_id, Recipient.envelope_id == envelope.id
-        )
+        select(Recipient).where(Recipient.id == recipient_id, Recipient.envelope_id == envelope.id)
     )
     recipient = result.scalar_one_or_none()
     if not recipient:
@@ -107,9 +105,7 @@ async def delete_recipient(
         )
 
     result = await db.execute(
-        select(Recipient).where(
-            Recipient.id == recipient_id, Recipient.envelope_id == envelope.id
-        )
+        select(Recipient).where(Recipient.id == recipient_id, Recipient.envelope_id == envelope.id)
     )
     recipient = result.scalar_one_or_none()
     if not recipient:
@@ -117,4 +113,3 @@ async def delete_recipient(
 
     await db.delete(recipient)
     await db.flush()
-    return None

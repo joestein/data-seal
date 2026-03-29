@@ -42,9 +42,7 @@ def _generate_certificate_pdf(
     elements = []
 
     # Title
-    title_style = ParagraphStyle(
-        "CertTitle", parent=styles["Title"], fontSize=18, spaceAfter=20
-    )
+    title_style = ParagraphStyle("CertTitle", parent=styles["Title"], fontSize=18, spaceAfter=20)
     elements.append(Paragraph("Certificate of Completion", title_style))
     elements.append(Spacer(1, 12))
 
@@ -62,29 +60,31 @@ def _generate_certificate_pdf(
     elements.append(Paragraph("<b>Signing Participants</b>", styles["Heading3"]))
     for r in recipients:
         signed_str = r.signed_at.strftime("%Y-%m-%d %H:%M:%S UTC") if r.signed_at else "N/A"
-        elements.append(Paragraph(
-            f"{r.name} ({r.email}) - {r.role} - Status: {r.status} - "
-            f"Signed: {signed_str} - IP: {r.ip_address or 'N/A'}",
-            info_style,
-        ))
+        elements.append(
+            Paragraph(
+                f"{r.name} ({r.email}) - {r.role} - Status: {r.status} - "
+                f"Signed: {signed_str} - IP: {r.ip_address or 'N/A'}",
+                info_style,
+            )
+        )
     elements.append(Spacer(1, 16))
 
     # Document hashes
     elements.append(Paragraph("<b>Document Integrity</b>", styles["Heading3"]))
     for doc_name, doc_hash in document_hashes.items():
-        elements.append(Paragraph(
-            f"{doc_name}: SHA-256 = {doc_hash}", info_style
-        ))
+        elements.append(Paragraph(f"{doc_name}: SHA-256 = {doc_hash}", info_style))
     elements.append(Spacer(1, 16))
 
     # Audit trail
     elements.append(Paragraph("<b>Audit Trail</b>", styles["Heading3"]))
     for event in audit_events:
         ts = event.created_at.strftime("%Y-%m-%d %H:%M:%S UTC") if event.created_at else ""
-        elements.append(Paragraph(
-            f"[{ts}] {event.event_type}: {event.description}",
-            info_style,
-        ))
+        elements.append(
+            Paragraph(
+                f"[{ts}] {event.event_type}: {event.description}",
+                info_style,
+            )
+        )
 
     doc.build(elements)
     return buffer.getvalue()
@@ -102,21 +102,14 @@ def finalize_envelope(self, envelope_id: str) -> None:
         storage_base = Path(settings.storage_local_path)
 
         # Load all documents, fields, recipients, audit events
-        documents = (
-            session.execute(select(Document).where(Document.envelope_id == envelope_id))
-            .scalars().all()
-        )
-        recipients = (
-            session.execute(select(Recipient).where(Recipient.envelope_id == envelope_id))
-            .scalars().all()
-        )
+        documents = session.execute(select(Document).where(Document.envelope_id == envelope_id)).scalars().all()
+        recipients = session.execute(select(Recipient).where(Recipient.envelope_id == envelope_id)).scalars().all()
         audit_events = (
             session.execute(
-                select(AuditEvent)
-                .where(AuditEvent.envelope_id == envelope_id)
-                .order_by(AuditEvent.created_at)
+                select(AuditEvent).where(AuditEvent.envelope_id == envelope_id).order_by(AuditEvent.created_at)
             )
-            .scalars().all()
+            .scalars()
+            .all()
         )
 
         from PIL import Image
@@ -145,7 +138,8 @@ def finalize_envelope(self, envelope_id: str) -> None:
                     .where(DocumentField.document_id == document.id)
                     .where(DocumentField.value.isnot(None))
                 )
-                .scalars().all()
+                .scalars()
+                .all()
             )
 
             # Process each page
@@ -181,6 +175,7 @@ def finalize_envelope(self, envelope_id: str) -> None:
                                 img_buffer.seek(0)
 
                                 from reportlab.lib.utils import ImageReader
+
                                 img_reader = ImageReader(img_buffer)
                                 c.drawImage(img_reader, x, y - h, width=w, height=h, mask="auto")
                             except Exception:
@@ -206,9 +201,7 @@ def finalize_envelope(self, envelope_id: str) -> None:
                 final_writer.add_page(page)
 
         # Generate certificate of completion
-        cert_pdf_bytes = _generate_certificate_pdf(
-            envelope, recipients, audit_events, document_hashes
-        )
+        cert_pdf_bytes = _generate_certificate_pdf(envelope, recipients, audit_events, document_hashes)
         cert_reader = PdfReader(io.BytesIO(cert_pdf_bytes))
         for page in cert_reader.pages:
             final_writer.add_page(page)
@@ -254,6 +247,6 @@ def finalize_envelope(self, envelope_id: str) -> None:
 
     except Exception as exc:
         session.rollback()
-        raise self.retry(exc=exc)
+        raise self.retry(exc=exc) from exc
     finally:
         session.close()

@@ -1,5 +1,6 @@
 """Authentication API endpoints."""
 
+import logging
 import secrets
 import uuid
 
@@ -19,7 +20,6 @@ from dataseal.api.deps import (
     verify_password,
 )
 from dataseal.config import settings
-from dataseal.security.token_blocklist import add_token_to_blocklist
 from dataseal.database import get_db
 from dataseal.models.user import ApiKey, User
 from dataseal.schemas.auth import (
@@ -33,6 +33,9 @@ from dataseal.schemas.auth import (
     UserResponse,
     UserUpdate,
 )
+from dataseal.security.token_blocklist import add_token_to_blocklist
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -127,13 +130,13 @@ async def logout(
             jti = payload.get("jti")
             exp = payload.get("exp")
             if jti and exp:
-                from datetime import datetime, UTC
+                from datetime import UTC, datetime
+
                 expires_at = datetime.fromtimestamp(exp, tz=UTC)
                 add_token_to_blocklist(jti, expires_at)
         except Exception:
             # Token decode may fail if already invalid; still return 204
-            pass
-    return None
+            logger.debug("Token decode failed during logout; ignoring")
 
 
 @router.get("/me", response_model=UserResponse)
@@ -195,9 +198,7 @@ async def list_api_keys(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    result = await db.execute(
-        select(ApiKey).where(ApiKey.user_id == current_user.id)
-    )
+    result = await db.execute(select(ApiKey).where(ApiKey.user_id == current_user.id))
     return result.scalars().all()
 
 
@@ -207,13 +208,10 @@ async def revoke_api_key(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    result = await db.execute(
-        select(ApiKey).where(ApiKey.id == key_id, ApiKey.user_id == current_user.id)
-    )
+    result = await db.execute(select(ApiKey).where(ApiKey.id == key_id, ApiKey.user_id == current_user.id))
     api_key = result.scalar_one_or_none()
     if not api_key:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="API key not found")
 
     api_key.is_active = False
     await db.flush()
-    return None

@@ -3,8 +3,6 @@
 import hashlib
 import hmac
 
-import pytest
-
 from dataseal.tasks.webhooks import _compute_signature
 
 

@@ -13,9 +13,7 @@ from dataseal.models.recipient import Recipient
 from dataseal.services.audit import create_audit_event
 
 
-async def get_recipient_by_token(
-    db: AsyncSession, token: str
-) -> Recipient | None:
+async def get_recipient_by_token(db: AsyncSession, token: str) -> Recipient | None:
     """Look up a recipient by their signing token."""
     result = await db.execute(
         select(Recipient)
@@ -90,9 +88,8 @@ async def update_field_value(
     elif field.type == "date_signed":
         # Auto-set to current date
         value = datetime.now(UTC).strftime("%Y-%m-%d")
-    elif field.validation_rule:
-        if not re.match(field.validation_rule, value):
-            raise ValueError("Value does not match validation rule")
+    elif field.validation_rule and not re.match(field.validation_rule, value):
+        raise ValueError("Value does not match validation rule")
 
     field.value = value
     field.completed_at = datetime.now(UTC)

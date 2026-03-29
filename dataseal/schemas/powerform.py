@@ -37,4 +37,5 @@ class PowerFormResponse(BaseModel):
 
 class PowerFormSubmit(BaseModel):
     """Data submitted by the public user filling in a PowerForm."""
+
     recipients: dict[str, dict[str, str]]  # role_name -> {name, email}

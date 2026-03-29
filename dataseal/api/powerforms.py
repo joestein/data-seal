@@ -23,6 +23,7 @@ router = APIRouter(tags=["powerforms"])
 
 # --- Authenticated CRUD ---
 
+
 @router.post("/powerforms", response_model=PowerFormResponse, status_code=status.HTTP_201_CREATED)
 async def create_powerform(
     data: PowerFormCreate,
@@ -31,23 +32,15 @@ async def create_powerform(
 ):
     # Validate template exists and belongs to user
     result = await db.execute(
-        select(Template).where(
-            Template.id == data.template_id, Template.user_id == current_user.id
-        )
+        select(Template).where(Template.id == data.template_id, Template.user_id == current_user.id)
     )
     if not result.scalar_one_or_none():
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Template not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Template not found")
 
     # Check slug uniqueness
-    existing = await db.execute(
-        select(PowerForm).where(PowerForm.slug == data.slug)
-    )
+    existing = await db.execute(select(PowerForm).where(PowerForm.slug == data.slug))
     if existing.scalar_one_or_none():
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT, detail="Slug already in use"
-        )
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Slug already in use")
 
     pf = PowerForm(
         user_id=current_user.id,
@@ -68,9 +61,7 @@ async def list_powerforms(
     db: AsyncSession = Depends(get_db),
 ):
     result = await db.execute(
-        select(PowerForm)
-        .where(PowerForm.user_id == current_user.id)
-        .order_by(PowerForm.created_at.desc())
+        select(PowerForm).where(PowerForm.user_id == current_user.id).order_by(PowerForm.created_at.desc())
     )
     return result.scalars().all()
 
@@ -81,11 +72,7 @@ async def get_powerform(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    result = await db.execute(
-        select(PowerForm).where(
-            PowerForm.id == pf_id, PowerForm.user_id == current_user.id
-        )
-    )
+    result = await db.execute(select(PowerForm).where(PowerForm.id == pf_id, PowerForm.user_id == current_user.id))
     pf = result.scalar_one_or_none()
     if not pf:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="PowerForm not found")
@@ -99,11 +86,7 @@ async def update_powerform(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    result = await db.execute(
-        select(PowerForm).where(
-            PowerForm.id == pf_id, PowerForm.user_id == current_user.id
-        )
-    )
+    result = await db.execute(select(PowerForm).where(PowerForm.id == pf_id, PowerForm.user_id == current_user.id))
     pf = result.scalar_one_or_none()
     if not pf:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="PowerForm not found")
@@ -125,21 +108,17 @@ async def delete_powerform(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    result = await db.execute(
-        select(PowerForm).where(
-            PowerForm.id == pf_id, PowerForm.user_id == current_user.id
-        )
-    )
+    result = await db.execute(select(PowerForm).where(PowerForm.id == pf_id, PowerForm.user_id == current_user.id))
     pf = result.scalar_one_or_none()
     if not pf:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="PowerForm not found")
 
     await db.delete(pf)
     await db.flush()
-    return None
 
 
 # --- Public endpoints ---
+
 
 @router.get("/p/{slug}")
 async def access_powerform(
@@ -147,9 +126,7 @@ async def access_powerform(
     db: AsyncSession = Depends(get_db),
 ):
     """Public endpoint to access a PowerForm."""
-    result = await db.execute(
-        select(PowerForm).where(PowerForm.slug == slug, PowerForm.is_active.is_(True))
-    )
+    result = await db.execute(select(PowerForm).where(PowerForm.slug == slug, PowerForm.is_active.is_(True)))
     pf = result.scalar_one_or_none()
     if not pf:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="PowerForm not found")
@@ -161,19 +138,14 @@ async def access_powerform(
         )
 
     # Load template recipients to show the form
-    template = await db.execute(
-        select(Template).where(Template.id == pf.template_id)
-    )
+    template = await db.execute(select(Template).where(Template.id == pf.template_id))
     template = template.scalar_one_or_none()
     if not template:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Associated template not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Associated template not found")
 
     from dataseal.models.template import TemplateRecipient
-    recipients = await db.execute(
-        select(TemplateRecipient).where(TemplateRecipient.template_id == template.id)
-    )
+
+    recipients = await db.execute(select(TemplateRecipient).where(TemplateRecipient.template_id == template.id))
     roles = recipients.scalars().all()
 
     return {
@@ -181,11 +153,7 @@ async def access_powerform(
             "name": pf.name,
             "slug": pf.slug,
         },
-        "roles": [
-            {"role_name": r.role_name, "role": r.role}
-            for r in roles
-            if r.role != "cc"
-        ],
+        "roles": [{"role_name": r.role_name, "role": r.role} for r in roles if r.role != "cc"],
     }
 
 
@@ -196,9 +164,7 @@ async def submit_powerform(
     db: AsyncSession = Depends(get_db),
 ):
     """Submit a PowerForm - creates an envelope and sends it."""
-    result = await db.execute(
-        select(PowerForm).where(PowerForm.slug == slug, PowerForm.is_active.is_(True))
-    )
+    result = await db.execute(select(PowerForm).where(PowerForm.slug == slug, PowerForm.is_active.is_(True)))
     pf = result.scalar_one_or_none()
     if not pf:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="PowerForm not found")
@@ -235,9 +201,7 @@ async def submit_powerform(
     from dataseal.models.recipient import Recipient
     from dataseal.models.template import TemplateDocument, TemplateField, TemplateRecipient
 
-    template_result = await db.execute(
-        select(Template).where(Template.id == pf.template_id)
-    )
+    template_result = await db.execute(select(Template).where(Template.id == pf.template_id))
     template = template_result.scalar_one_or_none()
     if not template:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
@@ -275,9 +239,7 @@ async def submit_powerform(
         recipient_map[tr.id] = recipient.id
 
     # Copy docs and fields
-    template_docs = await db.execute(
-        select(TemplateDocument).where(TemplateDocument.template_id == template.id)
-    )
+    template_docs = await db.execute(select(TemplateDocument).where(TemplateDocument.template_id == template.id))
     template_docs = template_docs.scalars().all()
 
     from dataseal.storage import storage
@@ -305,9 +267,7 @@ async def submit_powerform(
         await db.flush()
 
         # Copy fields
-        tf_result = await db.execute(
-            select(TemplateField).where(TemplateField.template_document_id == td.id)
-        )
+        tf_result = await db.execute(select(TemplateField).where(TemplateField.template_document_id == td.id))
         for tf in tf_result.scalars().all():
             if tf.template_recipient_id not in recipient_map:
                 continue
@@ -328,12 +288,14 @@ async def submit_powerform(
             db.add(field)
 
         from dataseal.tasks.documents import render_document_pages
+
         render_document_pages.delay(str(doc_id))
 
     await db.flush()
 
     # Send the envelope
     from dataseal.services.envelope import send_envelope
+
     await send_envelope(db, envelope, pf.user_id)
 
     # Increment use count
@@ -352,6 +314,7 @@ async def submit_powerform(
     first_signer = signers.scalars().first()
 
     from dataseal.tasks.emails import send_signing_emails
+
     send_signing_emails.delay(str(envelope.id))
 
     return {

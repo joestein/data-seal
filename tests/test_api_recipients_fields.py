@@ -1,15 +1,20 @@
 """API tests for recipients and fields management."""
 
 import io
+
 import pytest
 
 
 @pytest.fixture
 def envelope(client, registered_user, auth_headers):
     """Create a test envelope."""
-    response = client.post("/api/v1/envelopes", json={
-        "title": "Recipient Test Envelope",
-    }, headers=auth_headers)
+    response = client.post(
+        "/api/v1/envelopes",
+        json={
+            "title": "Recipient Test Envelope",
+        },
+        headers=auth_headers,
+    )
     assert response.status_code == 201
     return response.json()
 
@@ -163,7 +168,14 @@ class TestRecipientsAPI:
         response = client.get(f"/api/v1/envelopes/{envelope['id']}/recipients")
         assert response.status_code == 401
 
-    def test_recipient_on_other_users_envelope_returns_404(self, client, registered_user, auth_headers, envelope, second_user_auth):
+    def test_recipient_on_other_users_envelope_returns_404(
+        self,
+        client,
+        registered_user,
+        auth_headers,
+        envelope,
+        second_user_auth,
+    ):
         response = client.get(
             f"/api/v1/envelopes/{envelope['id']}/recipients",
             headers=second_user_auth,
@@ -187,9 +199,11 @@ class TestFieldsAPI:
 
     def test_field_type_validation_via_schema(self):
         """Verify field type validation at schema level."""
-        from pydantic import ValidationError
-        from dataseal.schemas.field import FieldCreate
         import uuid
+
+        from pydantic import ValidationError
+
+        from dataseal.schemas.field import FieldCreate
 
         with pytest.raises(ValidationError):
             FieldCreate(
@@ -203,9 +217,11 @@ class TestFieldsAPI:
             )
 
     def test_field_coordinate_out_of_range_validation(self):
-        from pydantic import ValidationError
-        from dataseal.schemas.field import FieldCreate
         import uuid
+
+        from pydantic import ValidationError
+
+        from dataseal.schemas.field import FieldCreate
 
         with pytest.raises(ValidationError):
             FieldCreate(
@@ -218,9 +234,7 @@ class TestFieldsAPI:
                 height=5.0,
             )
 
-    def test_list_fields_on_nonexistent_document_returns_404(
-        self, client, registered_user, auth_headers, envelope
-    ):
+    def test_list_fields_on_nonexistent_document_returns_404(self, client, registered_user, auth_headers, envelope):
         response = client.get(
             f"/api/v1/envelopes/{envelope['id']}/documents/00000000-0000-0000-0000-000000000000/fields",
             headers=auth_headers,

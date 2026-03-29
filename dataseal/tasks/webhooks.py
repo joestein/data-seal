@@ -95,7 +95,7 @@ def deliver_webhook(self, delivery_id: str) -> None:
                 backoff = 2 ** (delivery.attempt_count - 1)
                 delivery.next_retry_at = datetime.now(UTC) + timedelta(seconds=backoff)
                 session.commit()
-                raise self.retry(exc=exc, countdown=backoff)
+                raise self.retry(exc=exc, countdown=backoff) from exc
 
         session.commit()
 
@@ -126,13 +126,7 @@ def dispatch_webhook_event(envelope_id: str, event_type: str) -> None:
         )
 
         # Build payload
-        recipients = (
-            session.execute(
-                select(Recipient).where(Recipient.envelope_id == envelope_id)
-            )
-            .scalars()
-            .all()
-        )
+        recipients = session.execute(select(Recipient).where(Recipient.envelope_id == envelope_id)).scalars().all()
 
         payload = {
             "event": event_type,

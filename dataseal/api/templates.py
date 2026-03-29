@@ -31,12 +31,8 @@ from dataseal.storage import storage
 router = APIRouter(prefix="/templates", tags=["templates"])
 
 
-async def _get_template(
-    template_id: uuid.UUID, user: User, db: AsyncSession
-) -> Template:
-    result = await db.execute(
-        select(Template).where(Template.id == template_id, Template.user_id == user.id)
-    )
+async def _get_template(template_id: uuid.UUID, user: User, db: AsyncSession) -> Template:
+    result = await db.execute(select(Template).where(Template.id == template_id, Template.user_id == user.id))
     template = result.scalar_one_or_none()
     if not template:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Template not found")
@@ -65,9 +61,7 @@ async def list_templates(
     db: AsyncSession = Depends(get_db),
 ):
     result = await db.execute(
-        select(Template)
-        .where(Template.user_id == current_user.id)
-        .order_by(Template.created_at.desc())
+        select(Template).where(Template.user_id == current_user.id).order_by(Template.created_at.desc())
     )
     return result.scalars().all()
 
@@ -110,7 +104,6 @@ async def delete_template(
     template = await _get_template(template_id, current_user, db)
     await db.delete(template)
     await db.flush()
-    return None
 
 
 @router.post(
@@ -156,6 +149,7 @@ async def upload_template_document(
 
     # Render pages
     from dataseal.tasks.documents import render_document_pages
+
     render_document_pages.delay(str(doc_id))
 
     return template_doc
@@ -207,9 +201,7 @@ async def add_template_field(
         )
     )
     if not doc_result.scalar_one_or_none():
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Template document not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Template document not found")
 
     # Validate template recipient exists
     r_result = await db.execute(
@@ -346,11 +338,13 @@ async def create_envelope_from_template(
 
         # Render pages for the new document
         from dataseal.tasks.documents import render_document_pages
+
         render_document_pages.delay(str(doc_id))
 
     await db.flush()
 
     from dataseal.services.audit import create_audit_event
+
     await create_audit_event(
         db,
         envelope_id=envelope.id,

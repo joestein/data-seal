@@ -6,20 +6,28 @@ import pytest
 @pytest.fixture
 def template(client, registered_user, auth_headers):
     """Create and return a template."""
-    response = client.post("/api/v1/templates", json={
-        "name": "NDA Template",
-        "description": "Standard NDA",
-    }, headers=auth_headers)
+    response = client.post(
+        "/api/v1/templates",
+        json={
+            "name": "NDA Template",
+            "description": "Standard NDA",
+        },
+        headers=auth_headers,
+    )
     assert response.status_code == 201
     return response.json()
 
 
 class TestTemplateCRUD:
     def test_create_template_success(self, client, registered_user, auth_headers):
-        response = client.post("/api/v1/templates", json={
-            "name": "Employment Contract",
-            "description": "Standard employment contract",
-        }, headers=auth_headers)
+        response = client.post(
+            "/api/v1/templates",
+            json={
+                "name": "Employment Contract",
+                "description": "Standard employment contract",
+            },
+            headers=auth_headers,
+        )
         assert response.status_code == 201
         data = response.json()
         assert data["name"] == "Employment Contract"
@@ -27,9 +35,13 @@ class TestTemplateCRUD:
         assert "id" in data
 
     def test_create_template_no_description(self, client, registered_user, auth_headers):
-        response = client.post("/api/v1/templates", json={
-            "name": "Simple Template",
-        }, headers=auth_headers)
+        response = client.post(
+            "/api/v1/templates",
+            json={
+                "name": "Simple Template",
+            },
+            headers=auth_headers,
+        )
         assert response.status_code == 201
 
     def test_create_template_empty_name_returns_422(self, client, registered_user, auth_headers):
@@ -63,7 +75,14 @@ class TestTemplateCRUD:
         )
         assert response.status_code == 404
 
-    def test_get_other_users_template_returns_404(self, client, registered_user, auth_headers, template, second_user_auth):
+    def test_get_other_users_template_returns_404(
+        self,
+        client,
+        registered_user,
+        auth_headers,
+        template,
+        second_user_auth,
+    ):
         response = client.get(f"/api/v1/templates/{template['id']}", headers=second_user_auth)
         assert response.status_code == 404
 
@@ -99,7 +118,14 @@ class TestTemplateCRUD:
         )
         assert response.status_code == 404
 
-    def test_delete_other_users_template_returns_404(self, client, registered_user, auth_headers, template, second_user_auth):
+    def test_delete_other_users_template_returns_404(
+        self,
+        client,
+        registered_user,
+        auth_headers,
+        template,
+        second_user_auth,
+    ):
         response = client.delete(f"/api/v1/templates/{template['id']}", headers=second_user_auth)
         assert response.status_code == 404
 

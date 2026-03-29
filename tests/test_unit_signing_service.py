@@ -1,10 +1,7 @@
 """Unit tests for signing service business logic."""
 
 from datetime import UTC, datetime, timedelta
-from unittest.mock import AsyncMock, MagicMock, patch
-
-import pytest
-import pytest_asyncio
+from unittest.mock import MagicMock
 
 from dataseal.services.signing import validate_token
 

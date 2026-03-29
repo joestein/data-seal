@@ -19,7 +19,6 @@ from unittest.mock import patch
 import pytest
 import pytest_asyncio
 from fastapi.testclient import TestClient
-from sqlalchemy import JSON, String, Text, event
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.pool import StaticPool
 
@@ -29,14 +28,12 @@ TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
 def _setup_sqlite_type_compatibility():
     """Register event listeners to compile PG-specific types for SQLite."""
     from sqlalchemy.dialects.sqlite.base import SQLiteTypeCompiler
-    from sqlalchemy.dialects.postgresql import INET, JSONB
-    from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 
     # Make INET render as TEXT
     if not hasattr(SQLiteTypeCompiler, "_visit_INET_original"):
         SQLiteTypeCompiler._visit_INET_original = True
 
-        def visit_INET(self, type_, **kwargs):
+        def visit_INET(self, type_, **kwargs):  # noqa: N802
             return "TEXT"
 
         SQLiteTypeCompiler.visit_INET = visit_INET
@@ -45,7 +42,7 @@ def _setup_sqlite_type_compatibility():
     if not hasattr(SQLiteTypeCompiler, "_visit_JSONB_original"):
         SQLiteTypeCompiler._visit_JSONB_original = True
 
-        def visit_JSONB(self, type_, **kwargs):
+        def visit_JSONB(self, type_, **kwargs):  # noqa: N802
             return "JSON"
 
         SQLiteTypeCompiler.visit_JSONB = visit_JSONB
@@ -60,16 +57,17 @@ def _get_sqlite_metadata():
     """Return Base.metadata with all models imported."""
     # Import models to ensure they are registered with Base
     import dataseal.models.user  # noqa
-    import dataseal.models.envelope  # noqa
-    import dataseal.models.document  # noqa
-    import dataseal.models.recipient  # noqa
-    import dataseal.models.field  # noqa
-    import dataseal.models.audit  # noqa
-    import dataseal.models.template  # noqa
-    import dataseal.models.webhook  # noqa
-    import dataseal.models.powerform  # noqa
+    import dataseal.models.envelope
+    import dataseal.models.document
+    import dataseal.models.recipient
+    import dataseal.models.field
+    import dataseal.models.audit
+    import dataseal.models.template
+    import dataseal.models.webhook
+    import dataseal.models.powerform
     import dataseal.models.oauth  # noqa
     from dataseal.models.base import Base
+
     return Base.metadata
 
 
@@ -100,10 +98,10 @@ async def async_engine():
 def _strip_pg_partial_indexes(metadata):
     """Remove PostgreSQL-specific partial index conditions that SQLite can't handle."""
     from sqlalchemy import Index
-    from sqlalchemy.dialects.postgresql import ExcludeConstraint
+
     for table in metadata.tables.values():
         to_remove = []
-        for constraint in list(table.constraints):
+        for _constraint in list(table.constraints):
             # Keep only standard constraints
             pass
         for idx in list(table.indexes):
@@ -141,6 +139,7 @@ async def db_session(async_engine) -> AsyncGenerator[AsyncSession, None]:
 def app(db_session):
     """FastAPI test app with DB dependency overridden."""
     import os
+
     os.environ["SECRET_KEY"] = "test-secret-key-for-testing-only-must-be-at-least-32-chars"
     os.environ["BCRYPT_ROUNDS"] = "4"
 
@@ -169,22 +168,26 @@ def client(app):
         patch("dataseal.tasks.finalize.finalize_envelope.delay", return_value=None),
         patch("dataseal.tasks.documents.render_document_pages.delay", return_value=None),
         patch("dataseal.api.webhooks.validate_webhook_url", side_effect=lambda url: url),
+        TestClient(app, raise_server_exceptions=True) as c,
     ):
-        with TestClient(app, raise_server_exceptions=True) as c:
-            yield c
+        yield c
 
 
 # ---- Auth helpers ----
 
+
 @pytest.fixture
 def registered_user(client):
     """Register a test user and return the profile JSON."""
-    response = client.post("/api/v1/auth/register", json={
-        "email": "testuser@example.com",
-        "password": "TestPass123!",
-        "full_name": "Test User",
-        "company": "Test Corp",
-    })
+    response = client.post(
+        "/api/v1/auth/register",
+        json={
+            "email": "testuser@example.com",
+            "password": "TestPass123!",
+            "full_name": "Test User",
+            "company": "Test Corp",
+        },
+    )
     assert response.status_code == 201, response.json()
     return response.json()
 
@@ -192,10 +195,13 @@ def registered_user(client):
 @pytest.fixture
 def auth_token(client, registered_user):
     """Return a JWT access token for the registered test user."""
-    response = client.post("/api/v1/auth/login", json={
-        "email": "testuser@example.com",
-        "password": "TestPass123!",
-    })
+    response = client.post(
+        "/api/v1/auth/login",
+        json={
+            "email": "testuser@example.com",
+            "password": "TestPass123!",
+        },
+    )
     assert response.status_code == 200, response.json()
     return response.json()["access_token"]
 
@@ -209,14 +215,20 @@ def auth_headers(auth_token):
 @pytest.fixture
 def second_user_auth(client):
     """Register a second user and return their auth headers."""
-    client.post("/api/v1/auth/register", json={
-        "email": "second@example.com",
-        "password": "SecondPass123!",
-        "full_name": "Second User",
-    })
-    response = client.post("/api/v1/auth/login", json={
-        "email": "second@example.com",
-        "password": "SecondPass123!",
-    })
+    client.post(
+        "/api/v1/auth/register",
+        json={
+            "email": "second@example.com",
+            "password": "SecondPass123!",
+            "full_name": "Second User",
+        },
+    )
+    response = client.post(
+        "/api/v1/auth/login",
+        json={
+            "email": "second@example.com",
+            "password": "SecondPass123!",
+        },
+    )
     token = response.json()["access_token"]
     return {"Authorization": f"Bearer {token}"}

@@ -59,17 +59,18 @@ def create_refresh_token(user_id: str) -> str:
 def decode_token(token: str) -> dict:
     try:
         payload = jwt.decode(token, settings.secret_key, algorithms=["HS256"])
-    except JWTError:
+    except JWTError as err:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid or expired token",
-        )
+        ) from err
 
     # Check if the token has been revoked via the blocklist
     jti = payload.get("jti")
     if jti:
         try:
             from dataseal.security.token_blocklist import is_token_blocklisted
+
             if is_token_blocklisted(jti):
                 raise HTTPException(
                     status_code=status.HTTP_401_UNAUTHORIZED,
@@ -147,9 +148,7 @@ _current_api_key_scopes: dict[int, list[str] | None] = {}
 async def _authenticate_api_key(key: str, db: AsyncSession) -> User:
     """Authenticate via API key and store scopes for later enforcement."""
     prefix = key[:8]
-    result = await db.execute(
-        select(ApiKey).where(ApiKey.key_prefix == prefix, ApiKey.is_active.is_(True))
-    )
+    result = await db.execute(select(ApiKey).where(ApiKey.key_prefix == prefix, ApiKey.is_active.is_(True)))
     api_keys = result.scalars().all()
 
     for api_key in api_keys:
@@ -165,9 +164,7 @@ async def _authenticate_api_key(key: str, db: AsyncSession) -> User:
             api_key.last_used_at = datetime.now(UTC)
 
             # Load user
-            user_result = await db.execute(
-                select(User).where(User.id == api_key.user_id)
-            )
+            user_result = await db.execute(select(User).where(User.id == api_key.user_id))
             user = user_result.scalar_one_or_none()
             if not user or not user.is_active:
                 raise HTTPException(
@@ -196,6 +193,7 @@ def require_scope(*required_scopes: str):
         @router.post("/sensitive", dependencies=[Depends(require_scope("write", "admin"))])
         async def sensitive_endpoint(...): ...
     """
+
     async def _check_scope(
         current_user: User = Depends(get_current_user),
     ) -> User:
@@ -227,9 +225,7 @@ async def get_envelope_dep(
     db: AsyncSession = Depends(get_db),
 ) -> Envelope:
     """Get an envelope, ensuring it belongs to the current user."""
-    result = await db.execute(
-        select(Envelope).where(Envelope.id == envelope_id)
-    )
+    result = await db.execute(select(Envelope).where(Envelope.id == envelope_id))
     envelope = result.scalar_one_or_none()
 
     if not envelope or envelope.user_id != current_user.id:

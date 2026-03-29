@@ -20,7 +20,7 @@ _BLOCKLIST_PREFIX = "token:blocklist:"
 
 def _get_valkey() -> valkey.Valkey:
     """Get or create a Valkey client for the token blocklist."""
-    global _valkey_client
+    global _valkey_client  # noqa: PLW0603
     if _valkey_client is None:
         _valkey_client = valkey.from_url(settings.valkey_url, decode_responses=True)
     return _valkey_client

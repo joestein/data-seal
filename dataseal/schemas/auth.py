@@ -67,4 +67,5 @@ class ApiKeyResponse(BaseModel):
 
 class ApiKeyCreatedResponse(ApiKeyResponse):
     """Returned only on creation - includes the full key."""
+
     key: str

@@ -2,6 +2,7 @@
 
 import uuid
 from datetime import datetime
+from typing import ClassVar
 
 from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Index, Integer, String, Text
 from sqlalchemy.dialects.postgresql import JSONB, UUID
@@ -30,9 +31,7 @@ class DocumentField(Base, UUIDMixin, TimestampMixin):
     validation_rule: Mapped[str | None] = mapped_column(String(255), nullable=True)
     dropdown_options: Mapped[list | None] = mapped_column(JSONB, nullable=True)
     value: Mapped[str | None] = mapped_column(Text, nullable=True)
-    completed_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     # Relationships
     document = relationship("Document", back_populates="fields")
@@ -43,4 +42,4 @@ class DocumentField(Base, UUIDMixin, TimestampMixin):
         Index("idx_document_fields_recipient_id", "recipient_id"),
     )
 
-    VALID_TYPES = {"signature", "initials", "date_signed", "text", "checkbox", "dropdown"}
+    VALID_TYPES: ClassVar[set[str]] = {"signature", "initials", "date_signed", "text", "checkbox", "dropdown"}

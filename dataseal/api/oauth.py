@@ -1,9 +1,10 @@
 """OAuth 2.0 API endpoints."""
 
 import hashlib
+import logging
 import secrets
 import uuid
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from jose import jwt
@@ -24,6 +25,8 @@ from dataseal.schemas.oauth import (
     OAuthTokenResponse,
 )
 from dataseal.security.oauth_codes import consume_auth_code, store_auth_code
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/oauth", tags=["oauth"])
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -68,9 +71,7 @@ async def list_oauth_apps(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    result = await db.execute(
-        select(OAuthApp).where(OAuthApp.user_id == current_user.id)
-    )
+    result = await db.execute(select(OAuthApp).where(OAuthApp.user_id == current_user.id))
     return result.scalars().all()
 
 
@@ -80,11 +81,7 @@ async def get_oauth_app(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    result = await db.execute(
-        select(OAuthApp).where(
-            OAuthApp.id == app_id, OAuthApp.user_id == current_user.id
-        )
-    )
+    result = await db.execute(select(OAuthApp).where(OAuthApp.id == app_id, OAuthApp.user_id == current_user.id))
     app = result.scalar_one_or_none()
     if not app:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="OAuth app not found")
@@ -97,18 +94,13 @@ async def delete_oauth_app(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    result = await db.execute(
-        select(OAuthApp).where(
-            OAuthApp.id == app_id, OAuthApp.user_id == current_user.id
-        )
-    )
+    result = await db.execute(select(OAuthApp).where(OAuthApp.id == app_id, OAuthApp.user_id == current_user.id))
     app = result.scalar_one_or_none()
     if not app:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="OAuth app not found")
 
     await db.delete(app)
     await db.flush()
-    return None
 
 
 @router.get("/authorize")
@@ -151,21 +143,13 @@ async def authorize(
         # Default to S256 per RFC 7636
         code_challenge_method = "S256"
 
-    result = await db.execute(
-        select(OAuthApp).where(
-            OAuthApp.client_id == client_id, OAuthApp.is_active.is_(True)
-        )
-    )
+    result = await db.execute(select(OAuthApp).where(OAuthApp.client_id == client_id, OAuthApp.is_active.is_(True)))
     app = result.scalar_one_or_none()
     if not app:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid client_id"
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid client_id")
 
     if redirect_uri not in app.redirect_uris:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid redirect_uri"
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid redirect_uri")
 
     # Generate authorization code and store in Valkey with 10-minute TTL
     code = secrets.token_urlsafe(32)
@@ -194,30 +178,28 @@ async def token_exchange(
     """OAuth token endpoint - exchange auth code or JWT for access token."""
     if data.grant_type == "authorization_code":
         return await _handle_auth_code_grant(data, db)
-    elif data.grant_type == "urn:ietf:params:oauth:grant-type:jwt-bearer":
+    if data.grant_type == "urn:ietf:params:oauth:grant-type:jwt-bearer":
         return await _handle_jwt_bearer_grant(data, db)
-    else:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Unsupported grant_type: {data.grant_type}",
-        )
+    raise HTTPException(
+        status_code=status.HTTP_400_BAD_REQUEST,
+        detail=f"Unsupported grant_type: {data.grant_type}",
+    )
 
 
 def _verify_pkce(code_verifier: str, code_challenge: str, method: str) -> bool:
     """Verify a PKCE code_verifier against the stored code_challenge."""
     if method == "plain":
         return secrets.compare_digest(code_verifier, code_challenge)
-    elif method == "S256":
+    if method == "S256":
         import base64
+
         digest = hashlib.sha256(code_verifier.encode("ascii")).digest()
         computed = base64.urlsafe_b64encode(digest).rstrip(b"=").decode("ascii")
         return secrets.compare_digest(computed, code_challenge)
     return False
 
 
-async def _handle_auth_code_grant(
-    data: OAuthTokenRequest, db: AsyncSession
-) -> OAuthTokenResponse:
+async def _handle_auth_code_grant(data: OAuthTokenRequest, db: AsyncSession) -> OAuthTokenResponse:
     if not data.code or not data.client_id or not data.client_secret:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -227,19 +209,13 @@ async def _handle_auth_code_grant(
     # Consume auth code from Valkey (single-use, auto-expires after 10 minutes)
     code_data = consume_auth_code(data.code)
     if not code_data:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid or expired authorization code"
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid or expired authorization code")
 
     if code_data["client_id"] != data.client_id:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="Client ID mismatch"
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Client ID mismatch")
 
     if data.redirect_uri and code_data["redirect_uri"] != data.redirect_uri:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="Redirect URI mismatch"
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Redirect URI mismatch")
 
     # Verify PKCE if code_challenge was provided during authorization
     if code_data.get("code_challenge"):
@@ -256,14 +232,10 @@ async def _handle_auth_code_grant(
             )
 
     # Validate client secret
-    result = await db.execute(
-        select(OAuthApp).where(OAuthApp.client_id == data.client_id)
-    )
+    result = await db.execute(select(OAuthApp).where(OAuthApp.client_id == data.client_id))
     app = result.scalar_one_or_none()
     if not app or not pwd_context.verify(data.client_secret, app.client_secret_hash):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid client credentials"
-        )
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid client credentials")
 
     user_id = code_data["user_id"]
     access_token = create_access_token(user_id)
@@ -277,9 +249,7 @@ async def _handle_auth_code_grant(
     )
 
 
-async def _handle_jwt_bearer_grant(
-    data: OAuthTokenRequest, db: AsyncSession
-) -> OAuthTokenResponse:
+async def _handle_jwt_bearer_grant(data: OAuthTokenRequest, db: AsyncSession) -> OAuthTokenResponse:
     if not data.assertion:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -293,27 +263,21 @@ async def _handle_jwt_bearer_grant(
             settings.secret_key,
             algorithms=["HS256"],
         )
-    except Exception:
+    except Exception as err:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid JWT assertion",
-        )
+        ) from err
 
     user_id = payload.get("sub")
     if not user_id:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid JWT assertion"
-        )
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid JWT assertion")
 
     # Verify user exists
-    result = await db.execute(
-        select(User).where(User.id == uuid.UUID(user_id))
-    )
+    result = await db.execute(select(User).where(User.id == uuid.UUID(user_id)))
     user = result.scalar_one_or_none()
     if not user or not user.is_active:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found or inactive"
-        )
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found or inactive")
 
     access_token = create_access_token(str(user.id))
 
@@ -341,5 +305,5 @@ async def revoke_token(
             add_token_to_blocklist(jti, expires_at)
     except Exception:
         # RFC 7009: The server responds with HTTP 200 even if the token is invalid
-        pass
+        logger.debug("Token revocation failed; ignoring per RFC 7009")
     return {"message": "Token revoked"}

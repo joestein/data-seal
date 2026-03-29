@@ -76,6 +76,7 @@ async def upload_document(
         )
 
     from uuid_extensions import uuid7
+
     doc_id = uuid7()
 
     storage_path = f"documents/{envelope_id}/{doc_id}/original.pdf"
@@ -96,6 +97,7 @@ async def upload_document(
 
     # Enqueue page rendering
     from dataseal.tasks.documents import render_document_pages
+
     render_document_pages.delay(str(doc_id))
 
     return document
@@ -107,9 +109,7 @@ async def list_documents(
     db: AsyncSession = Depends(get_db),
 ):
     result = await db.execute(
-        select(Document)
-        .where(Document.envelope_id == envelope.id)
-        .order_by(Document.display_order)
+        select(Document).where(Document.envelope_id == envelope.id).order_by(Document.display_order)
     )
     return result.scalars().all()
 
@@ -120,9 +120,7 @@ async def get_document(
     envelope: Envelope = Depends(get_envelope_dep),
     db: AsyncSession = Depends(get_db),
 ):
-    result = await db.execute(
-        select(Document).where(Document.id == doc_id, Document.envelope_id == envelope.id)
-    )
+    result = await db.execute(select(Document).where(Document.id == doc_id, Document.envelope_id == envelope.id))
     document = result.scalar_one_or_none()
     if not document:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document not found")
@@ -135,9 +133,7 @@ async def download_document(
     envelope: Envelope = Depends(get_envelope_dep),
     db: AsyncSession = Depends(get_db),
 ):
-    result = await db.execute(
-        select(Document).where(Document.id == doc_id, Document.envelope_id == envelope.id)
-    )
+    result = await db.execute(select(Document).where(Document.id == doc_id, Document.envelope_id == envelope.id))
     document = result.scalar_one_or_none()
     if not document:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document not found")
@@ -165,9 +161,7 @@ async def delete_document(
             detail="Cannot remove documents after envelope has been sent",
         )
 
-    result = await db.execute(
-        select(Document).where(Document.id == doc_id, Document.envelope_id == envelope.id)
-    )
+    result = await db.execute(select(Document).where(Document.id == doc_id, Document.envelope_id == envelope.id))
     document = result.scalar_one_or_none()
     if not document:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document not found")
@@ -175,7 +169,6 @@ async def delete_document(
     await storage.delete(document.storage_path)
     await db.delete(document)
     await db.flush()
-    return None
 
 
 @router.get("/{doc_id}/pages", response_model=list[PageResponse])
@@ -184,19 +177,19 @@ async def list_pages(
     envelope: Envelope = Depends(get_envelope_dep),
     db: AsyncSession = Depends(get_db),
 ):
-    result = await db.execute(
-        select(Document).where(Document.id == doc_id, Document.envelope_id == envelope.id)
-    )
+    result = await db.execute(select(Document).where(Document.id == doc_id, Document.envelope_id == envelope.id))
     document = result.scalar_one_or_none()
     if not document:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document not found")
 
     pages = []
     for i in range(1, document.page_count + 1):
-        pages.append(PageResponse(
-            page_number=i,
-            image_url=f"/api/v1/envelopes/{envelope.id}/documents/{doc_id}/pages/{i}",
-        ))
+        pages.append(
+            PageResponse(
+                page_number=i,
+                image_url=f"/api/v1/envelopes/{envelope.id}/documents/{doc_id}/pages/{i}",
+            )
+        )
     return pages
 
 
@@ -207,9 +200,7 @@ async def get_page_image(
     envelope: Envelope = Depends(get_envelope_dep),
     db: AsyncSession = Depends(get_db),
 ):
-    result = await db.execute(
-        select(Document).where(Document.id == doc_id, Document.envelope_id == envelope.id)
-    )
+    result = await db.execute(select(Document).where(Document.id == doc_id, Document.envelope_id == envelope.id))
     document = result.scalar_one_or_none()
     if not document:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document not found")
@@ -217,10 +208,7 @@ async def get_page_image(
     if page_number < 1 or page_number > document.page_count:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Page not found")
 
-    page_path = (
-        Path(settings.storage_local_path)
-        / f"documents/{envelope.id}/{doc_id}/pages/page_{page_number}.png"
-    )
+    page_path = Path(settings.storage_local_path) / f"documents/{envelope.id}/{doc_id}/pages/page_{page_number}.png"
     if not page_path.exists():
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Page image not found")
 

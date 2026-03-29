@@ -2,6 +2,7 @@
 
 import uuid
 from datetime import datetime
+from typing import ClassVar
 
 from sqlalchemy import DateTime, ForeignKey, Index, Integer, String, Text
 from sqlalchemy.dialects.postgresql import INET, UUID
@@ -21,18 +22,10 @@ class Recipient(Base, UUIDMixin, TimestampMixin):
     role: Mapped[str] = mapped_column(String(20), nullable=False, default="signer")
     routing_order: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
     status: Mapped[str] = mapped_column(String(20), nullable=False, default="created")
-    signing_token: Mapped[str | None] = mapped_column(
-        String(128), unique=True, nullable=True
-    )
-    token_expires_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
-    signed_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
-    declined_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
+    signing_token: Mapped[str | None] = mapped_column(String(128), unique=True, nullable=True)
+    token_expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    signed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    declined_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     declined_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
     ip_address: Mapped[str | None] = mapped_column(INET, nullable=True)
     user_agent: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -51,5 +44,5 @@ class Recipient(Base, UUIDMixin, TimestampMixin):
         Index("idx_recipients_email", "email"),
     )
 
-    VALID_ROLES = {"signer", "cc", "in_person_signer"}
-    VALID_STATUSES = {"created", "sent", "delivered", "signed", "declined"}
+    VALID_ROLES: ClassVar[set[str]] = {"signer", "cc", "in_person_signer"}
+    VALID_STATUSES: ClassVar[set[str]] = {"created", "sent", "delivered", "signed", "declined"}

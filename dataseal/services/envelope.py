@@ -12,9 +12,7 @@ from dataseal.models.recipient import Recipient
 from dataseal.services.audit import create_audit_event
 
 
-async def validate_envelope_for_sending(
-    db: AsyncSession, envelope: Envelope
-) -> list[str]:
+async def validate_envelope_for_sending(db: AsyncSession, envelope: Envelope) -> list[str]:
     """Validate an envelope is ready to be sent. Returns list of error messages."""
     errors = []
 
@@ -71,9 +69,7 @@ async def send_envelope(
     return envelope
 
 
-async def generate_tokens_for_current_group(
-    db: AsyncSession, envelope: Envelope
-) -> list[Recipient]:
+async def generate_tokens_for_current_group(db: AsyncSession, envelope: Envelope) -> list[Recipient]:
     """Generate signing tokens for recipients in the current routing order group."""
     signers = [r for r in envelope.recipients if r.role in ("signer", "in_person_signer")]
     if not signers:
@@ -103,9 +99,7 @@ async def generate_tokens_for_current_group(
     return current_group
 
 
-async def check_envelope_completion(
-    db: AsyncSession, envelope: Envelope
-) -> bool:
+async def check_envelope_completion(db: AsyncSession, envelope: Envelope) -> bool:
     """Check if all signers have signed and update envelope status accordingly."""
     signers = [r for r in envelope.recipients if r.role in ("signer", "in_person_signer")]
 

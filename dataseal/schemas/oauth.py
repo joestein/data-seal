@@ -28,6 +28,7 @@ class OAuthAppResponse(BaseModel):
 
 class OAuthAppCreatedResponse(OAuthAppResponse):
     """Returned only at creation time - includes the client secret."""
+
     client_secret: str
 
 

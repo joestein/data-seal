@@ -33,10 +33,10 @@ python -m alembic upgrade head
 # Generate a new migration after model changes
 python -m alembic revision --autogenerate -m "describe the change"
 
-# Start the dev API server (requires db + redis running)
+# Start the dev API server (requires db + valkey running)
 uvicorn dataseal.main:app --reload --port 8000
 
-# Start a Celery worker (requires redis running)
+# Start a Celery worker (requires valkey running)
 celery -A dataseal.tasks.celery_app worker --loglevel=info -Q celery,emails,documents,webhooks,finalize
 ```
 
@@ -44,7 +44,7 @@ celery -A dataseal.tasks.celery_app worker --loglevel=info -Q celery,emails,docu
 
 - **FastAPI** (`dataseal/main.py`) — app factory, mounts 10 routers under `/api/v1`
 - **PostgreSQL** — primary persistence via async SQLAlchemy ORM
-- **Redis** — Celery task broker + JWT revocation blocklist
+- **Valkey** — Celery task broker + JWT revocation blocklist
 - **Celery Worker** — PDF rendering, email sending, document finalization, webhook delivery
 - **File storage** — `dataseal/storage.py` provides a `StorageBackend` ABC; `LocalStorageBackend` stores files under `STORAGE_LOCAL_PATH`
 
@@ -94,10 +94,10 @@ dataseal/
     finalize.py        # finalize_envelope (signature overlay + certificate PDF)
     webhooks.py        # deliver_webhook (HMAC-SHA256, exponential backoff)
   security/
-    token_blocklist.py # Redis-based JWT JTI blocklist
+    token_blocklist.py # Valkey-based JWT JTI blocklist
     encryption.py      # encrypt_value / decrypt_value for webhook secrets
     url_validation.py  # SSRF prevention for webhook URLs
-    oauth_codes.py     # In-memory OAuth authorization code store
+    oauth_codes.py     # Valkey-backed OAuth authorization code store
   email_templates/     # Jinja2 HTML email templates
   templates/           # Server-rendered Jinja2 pages (signing.html, powerform.html)
 alembic/
@@ -180,7 +180,7 @@ python -c "import secrets; print(secrets.token_urlsafe(64))"
 
 ## Known Limitations
 
-- OAuth authorization codes are stored in an in-memory dict (`dataseal/security/oauth_codes.py`). Codes are lost on worker restart and are not shared between processes. For production, migrate to Redis.
+- OAuth authorization codes are stored in Valkey (`dataseal/security/oauth_codes.py`) with a 10-minute TTL and atomic consume.
 - Rate limiting is configured in settings (`RATE_LIMIT_PER_MINUTE`) but the `slowapi` middleware is not yet mounted. All endpoints are currently unthrottled.
 - The signing page uses typed-name signatures rendered as base64 text, not canvas-drawn signatures.
 - Celery tasks use synchronous SQLAlchemy sessions; async operations inside tasks require `asyncio.run()` wrappers.

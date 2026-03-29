@@ -1,4 +1,4 @@
-"""Redis-based JWT token blocklist for token revocation.
+"""Valkey-based JWT token blocklist for token revocation.
 
 When a user logs out or a token is revoked, the token's JTI (JWT ID) is
 added to the blocklist with a TTL matching the token's remaining lifetime.
@@ -8,22 +8,22 @@ the token.
 
 from datetime import UTC, datetime
 
-import redis
+import valkey
 
 from dataseal.config import settings
 
-_redis_client: redis.Redis | None = None
+_valkey_client: valkey.Valkey | None = None
 
-# Key prefix for blocklist entries in Redis
+# Key prefix for blocklist entries in Valkey
 _BLOCKLIST_PREFIX = "token:blocklist:"
 
 
-def _get_redis() -> redis.Redis:
-    """Get or create a Redis client for the token blocklist."""
-    global _redis_client
-    if _redis_client is None:
-        _redis_client = redis.from_url(settings.redis_url, decode_responses=True)
-    return _redis_client
+def _get_valkey() -> valkey.Valkey:
+    """Get or create a Valkey client for the token blocklist."""
+    global _valkey_client
+    if _valkey_client is None:
+        _valkey_client = valkey.from_url(settings.valkey_url, decode_responses=True)
+    return _valkey_client
 
 
 def add_token_to_blocklist(jti: str, expires_at: datetime) -> None:
@@ -34,7 +34,7 @@ def add_token_to_blocklist(jti: str, expires_at: datetime) -> None:
         expires_at: When the token expires. The blocklist entry will
                     be automatically removed after this time.
     """
-    r = _get_redis()
+    r = _get_valkey()
     now = datetime.now(UTC)
 
     # Calculate remaining TTL in seconds
@@ -56,6 +56,6 @@ def is_token_blocklisted(jti: str) -> bool:
     Returns:
         True if the token has been revoked, False otherwise.
     """
-    r = _get_redis()
+    r = _get_valkey()
     key = f"{_BLOCKLIST_PREFIX}{jti}"
     return r.exists(key) > 0

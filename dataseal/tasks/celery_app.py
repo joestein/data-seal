@@ -6,8 +6,8 @@ from dataseal.config import settings
 
 celery_app = Celery(
     "dataseal",
-    broker=settings.redis_url,
-    backend=settings.redis_url,
+    broker=settings.valkey_url,
+    backend=settings.valkey_url,
 )
 
 celery_app.conf.update(

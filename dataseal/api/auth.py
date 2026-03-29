@@ -119,7 +119,7 @@ async def logout(
     credentials: HTTPAuthorizationCredentials | None = Depends(security),
     current_user: User = Depends(get_current_user),
 ):
-    """Logout by adding the current token's JTI to the Redis blocklist."""
+    """Logout by adding the current token's JTI to the Valkey blocklist."""
     if credentials:
         token = credentials.credentials
         try:

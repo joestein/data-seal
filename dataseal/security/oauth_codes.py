@@ -1,6 +1,6 @@
-"""Redis-backed OAuth authorization code storage with TTL.
+"""Valkey-backed OAuth authorization code storage with TTL.
 
-Replaces the in-memory dict with Redis to provide:
+Replaces the in-memory dict with Valkey to provide:
 - Persistence across restarts
 - Automatic expiration via TTL (10 minutes)
 - No unbounded memory growth
@@ -9,21 +9,21 @@ Replaces the in-memory dict with Redis to provide:
 import json
 from datetime import UTC, datetime, timedelta
 
-import redis
+import valkey
 
 from dataseal.config import settings
 
-_redis_client: redis.Redis | None = None
+_valkey_client: valkey.Valkey | None = None
 
 _AUTH_CODE_PREFIX = "oauth:auth_code:"
 _AUTH_CODE_TTL_SECONDS = 600  # 10 minutes
 
 
-def _get_redis() -> redis.Redis:
-    global _redis_client
-    if _redis_client is None:
-        _redis_client = redis.from_url(settings.redis_url, decode_responses=True)
-    return _redis_client
+def _get_valkey() -> valkey.Valkey:
+    global _valkey_client
+    if _valkey_client is None:
+        _valkey_client = valkey.from_url(settings.valkey_url, decode_responses=True)
+    return _valkey_client
 
 
 def store_auth_code(
@@ -35,7 +35,7 @@ def store_auth_code(
     code_challenge: str | None = None,
     code_challenge_method: str | None = None,
 ) -> None:
-    """Store an authorization code in Redis with a 10-minute TTL.
+    """Store an authorization code in Valkey with a 10-minute TTL.
 
     Args:
         code: The authorization code string.
@@ -46,7 +46,7 @@ def store_auth_code(
         code_challenge: PKCE code challenge (optional).
         code_challenge_method: PKCE method, either "S256" or "plain" (optional).
     """
-    r = _get_redis()
+    r = _get_valkey()
     data = {
         "user_id": user_id,
         "client_id": client_id,
@@ -69,7 +69,7 @@ def consume_auth_code(code: str) -> dict | None:
     Returns:
         The code data dict if valid and not expired, None otherwise.
     """
-    r = _get_redis()
+    r = _get_valkey()
     key = f"{_AUTH_CODE_PREFIX}{code}"
 
     # Use a pipeline to atomically GET and DELETE

@@ -61,13 +61,13 @@ Copy `.env.example` to `.env` and configure these values before starting.
 
 If using an external PostgreSQL instance, update both URLs to point to it and remove the `db` service from `docker-compose.yml`.
 
-### Redis
+### Valkey
 
 | Variable | Default | Notes |
 |----------|---------|-------|
-| `REDIS_URL` | `redis://localhost:6379/0` | Used as Celery broker and JWT revocation store |
+| `VALKEY_URL` | `redis://localhost:6379/0` | Used as Celery broker and JWT revocation store. Uses `redis://` scheme for Celery transport compatibility. |
 
-If using an external Redis instance (e.g., ElastiCache, Redis Cloud), update this URL and remove the `redis` service from `docker-compose.yml`.
+If using an external Valkey instance, update this URL and remove the `valkey` service from `docker-compose.yml`.
 
 ### Email (SMTP)
 
@@ -117,7 +117,7 @@ services:
   celery-worker # Background tasks (email, PDF rendering, webhooks)
   celery-beat   # Scheduled task dispatcher
   db            # PostgreSQL 16
-  redis         # Redis 7
+  valkey        # Valkey 8
   mailhog       # Dev email capture (remove in production)
 ```
 
@@ -132,7 +132,7 @@ services:
     ...
 ```
 
-**Remove host-exposed database ports** to prevent direct access from outside the host. In `docker-compose.yml`, remove the `ports` declarations from `db` and `redis`:
+**Remove host-exposed database ports** to prevent direct access from outside the host. In `docker-compose.yml`, remove the `ports` declarations from `db` and `valkey`:
 
 ```yaml
   db:
@@ -142,16 +142,16 @@ services:
     #   - "5432:5432"
 ```
 
-**Set a Redis password** for production deployments by adding `--requirepass <password>` to the Redis command and updating `REDIS_URL`:
+**Set a Valkey password** for production deployments by adding `--requirepass <password>` to the Valkey command and updating `VALKEY_URL`:
 
 ```yaml
-  redis:
-    image: redis:7-alpine
-    command: redis-server --requirepass your-redis-password
+  valkey:
+    image: valkey/valkey:8-alpine
+    command: valkey-server --requirepass your-valkey-password
 ```
 
 ```
-REDIS_URL=redis://:your-redis-password@redis:6379/0
+VALKEY_URL=redis://:your-valkey-password@valkey:6379/0
 ```
 
 **Disable OpenAPI docs** in production by setting the `docs_url` and `redoc_url` to `None` in `dataseal/main.py`, or route them behind authentication at the nginx layer.
@@ -309,7 +309,7 @@ In production, consider mounting the storage volume to a managed storage service
 curl https://sign.yourcompany.com/health
 ```
 
-Returns `{"status":"ok","db":"ok","redis":"ok"}` when all dependencies are reachable. Returns `503` with `"status":"degraded"` if any dependency is unavailable. Use this endpoint for load balancer health checks.
+Returns `{"status":"ok","db":"ok","valkey":"ok"}` when all dependencies are reachable. Returns `503` with `"status":"degraded"` if any dependency is unavailable. Use this endpoint for load balancer health checks.
 
 ### Logging
 
@@ -336,8 +336,8 @@ Before going live, verify the following:
 - [ ] `DEBUG=false` in production
 - [ ] `APP_URL` is set to the correct HTTPS URL (signing links use this)
 - [ ] MailHog service is removed from `docker-compose.yml`
-- [ ] PostgreSQL and Redis `ports` are not exposed to the host
-- [ ] Redis has a password configured
+- [ ] PostgreSQL and Valkey `ports` are not exposed to the host
+- [ ] Valkey has a password configured
 - [ ] TLS is terminated at a reverse proxy; `SMTP_USE_TLS=true` if using TLS SMTP
 - [ ] OpenAPI docs (`/docs`, `/redoc`) are restricted or disabled
 - [ ] File storage volume is on persistent, backed-up storage
@@ -346,7 +346,7 @@ Before going live, verify the following:
 ### Known security limitations (to address before production)
 
 - **Rate limiting**: The `slowapi` package is a dependency but the middleware is not mounted. All endpoints are currently unthrottled. Mount `SlowAPIMiddleware` and apply the `@limiter.limit()` decorator to login, register, and signing endpoints.
-- **OAuth in-memory codes**: Authorization codes are stored in an in-memory dict and are lost on restart. Migrate `dataseal/security/oauth_codes.py` to Redis for production.
+- **OAuth codes**: Authorization codes are stored in Valkey with a 10-minute TTL. Ensure Valkey is available and persistent for production.
 - **Content-Security-Policy**: The security headers middleware does not set a `Content-Security-Policy` header. Add a CSP appropriate for the signing page before allowing untrusted content.
 
 ---

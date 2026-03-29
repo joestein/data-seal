@@ -43,8 +43,8 @@ class Settings(BaseSettings):
     database_url: str = "postgresql+asyncpg://dataseal:dataseal@localhost:5432/dataseal"
     database_url_sync: str = "postgresql://dataseal:dataseal@localhost:5432/dataseal"
 
-    # Redis
-    redis_url: str = "redis://localhost:6379/0"
+    # Valkey
+    valkey_url: str = "redis://localhost:6379/0"
 
     # Email
     smtp_host: str = "localhost"

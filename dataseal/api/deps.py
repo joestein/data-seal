@@ -80,9 +80,9 @@ def decode_token(token: str) -> dict:
         except HTTPException:
             raise
         except Exception:
-            # If Redis is unavailable, log but do not block the request
-            # to avoid a denial-of-service when Redis is down
-            logger.warning("Failed to check token blocklist (Redis may be unavailable)")
+            # If Valkey is unavailable, log but do not block the request
+            # to avoid a denial-of-service when Valkey is down
+            logger.warning("Failed to check token blocklist (Valkey may be unavailable)")
 
     return payload
 

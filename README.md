@@ -19,7 +19,7 @@ docker compose up
 
 # 4. The API is now live
 curl http://localhost:8000/health
-# -> {"status":"ok","db":"ok","redis":"ok"}
+# -> {"status":"ok","db":"ok","valkey":"ok"}
 
 # 5. Browse interactive API docs
 open http://localhost:8000/docs
@@ -45,7 +45,7 @@ cp .env.example .env
 docker compose up --build
 ```
 
-Docker Compose starts six services: `app` (FastAPI on port 8000), `celery-worker`, `celery-beat`, `db` (PostgreSQL 16), `redis` (Redis 7), and `mailhog`.
+Docker Compose starts six services: `app` (FastAPI on port 8000), `celery-worker`, `celery-beat`, `db` (PostgreSQL 16), `valkey` (Valkey 8), and `mailhog`.
 
 Database migrations run automatically on `app` startup via `alembic upgrade head`.
 
@@ -59,7 +59,7 @@ pip install uv
 uv sync --extra dev
 
 # Start infrastructure only
-docker compose up db redis mailhog -d
+docker compose up db valkey mailhog -d
 
 # Copy and edit .env
 cp .env.example .env
@@ -156,7 +156,7 @@ graph TB
 
     subgraph "Data Layer"
         PG[(PostgreSQL 16<br/>Primary Database)]
-        REDIS[(Redis 7<br/>Cache + Task Broker)]
+        VALKEY[(Valkey 8<br/>Cache + Task Broker)]
         FS[File Storage<br/>Local / S3-compatible]
     end
 
@@ -168,15 +168,15 @@ graph TB
     WEB -->|HTTP| FASTAPI
     APICLIENT -->|REST| FASTAPI
     FASTAPI -->|Read/Write| PG
-    FASTAPI -->|Token blocklist / sessions| REDIS
+    FASTAPI -->|Token blocklist / sessions| VALKEY
     FASTAPI -->|Upload/Download| FS
-    FASTAPI -->|Enqueue tasks| REDIS
-    WORKER -->|Consume tasks| REDIS
+    FASTAPI -->|Enqueue tasks| VALKEY
+    WORKER -->|Consume tasks| VALKEY
     WORKER -->|Read/Write| PG
     WORKER -->|Read files| FS
     WORKER -->|Send email| SMTP
     WORKER -->|POST events| WHOOK
-    BEAT -->|Scheduled jobs| REDIS
+    BEAT -->|Scheduled jobs| VALKEY
 ```
 
 ### Component overview
@@ -187,7 +187,7 @@ graph TB
 | **Celery Worker** | PDF rendering, email sending, document finalization, webhook delivery |
 | **Celery Beat** | Scheduled retry of pending webhook deliveries |
 | **PostgreSQL** | All persistent data (envelopes, documents, recipients, audit trail) |
-| **Redis** | Celery task broker, JWT revocation blocklist |
+| **Valkey** | Celery task broker, JWT revocation blocklist |
 | **File storage** | Original PDFs, rendered page images, completed documents |
 | **MailHog** | Local SMTP capture for development |
 
@@ -231,7 +231,7 @@ See [docs/API.md](docs/API.md) for the full reference with request/response sche
 | `DEBUG` | Enable debug mode (broadens CORS) | `false` | No |
 | `DATABASE_URL` | Async PostgreSQL URL (`postgresql+asyncpg://...`) | `postgresql+asyncpg://dataseal:dataseal@localhost:5432/dataseal` | No |
 | `DATABASE_URL_SYNC` | Sync PostgreSQL URL for Celery/Alembic | `postgresql://dataseal:dataseal@localhost:5432/dataseal` | No |
-| `REDIS_URL` | Redis connection URL | `redis://localhost:6379/0` | No |
+| `VALKEY_URL` | Valkey connection URL | `redis://localhost:6379/0` | No |
 | `SMTP_HOST` | SMTP server hostname | `localhost` | No |
 | `SMTP_PORT` | SMTP server port | `1025` | No |
 | `SMTP_USER` | SMTP username | `` | No |
@@ -276,7 +276,7 @@ The test suite contains 230 tests across unit, API, and integration layers. Cele
 
 ## Security
 
-- JWT access tokens (15 min lifetime). Logout revokes the token JTI via a Redis blocklist.
+- JWT access tokens (15 min lifetime). Logout revokes the token JTI via a Valkey blocklist.
 - Passwords are bcrypt-hashed (12 rounds). API keys are bcrypt-hashed with an 8-character prefix stored for fast lookup.
 - Webhook URLs are validated at registration to block SSRF against internal/private IP ranges and cloud metadata endpoints.
 - Webhook payloads are signed with HMAC-SHA256 using a per-endpoint secret stored encrypted at rest.

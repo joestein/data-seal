@@ -53,15 +53,15 @@ def create_app() -> FastAPI:
             health["db"] = "error"
             health["status"] = "degraded"
 
-        # Check Redis
+        # Check Valkey
         try:
-            import redis
+            import valkey
 
-            r = redis.from_url(settings.redis_url)
+            r = valkey.from_url(settings.valkey_url)
             r.ping()
-            health["redis"] = "ok"
+            health["valkey"] = "ok"
         except Exception:
-            health["redis"] = "error"
+            health["valkey"] = "error"
             health["status"] = "degraded"
 
         status_code = 200 if health["status"] == "ok" else 503

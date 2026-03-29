@@ -63,12 +63,12 @@ jobs:
           --health-timeout 5s
           --health-retries 10
 
-      redis:
-        image: redis:7-alpine
+      valkey:
+        image: valkey/valkey:8-alpine
         ports:
           - 6379:6379
         options: >-
-          --health-cmd "redis-cli ping"
+          --health-cmd "valkey-cli ping"
           --health-interval 5s
           --health-timeout 5s
           --health-retries 10
@@ -77,7 +77,7 @@ jobs:
       # Tests use SQLite in-memory, but these are set to avoid import errors
       DATABASE_URL: postgresql+asyncpg://dataseal:dataseal@localhost:5432/dataseal_test
       DATABASE_URL_SYNC: postgresql://dataseal:dataseal@localhost:5432/dataseal_test
-      REDIS_URL: redis://localhost:6379/0
+      VALKEY_URL: redis://localhost:6379/0
       # Must be 32+ chars; rejecting known weak values is enforced in config.py
       SECRET_KEY: ci-test-secret-key-long-enough-for-validation-32chars
       APP_URL: http://localhost:8000

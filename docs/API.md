@@ -112,7 +112,7 @@ Exchange a refresh token for a new access/refresh token pair.
 
 ### POST /auth/logout
 
-Revoke the current access token. Adds the token JTI to the Redis blocklist.
+Revoke the current access token. Adds the token JTI to the Valkey blocklist.
 
 **Auth**: Bearer token required.
 
@@ -1295,7 +1295,7 @@ Check service health. Does not require authentication.
 {
   "status": "ok",
   "db": "ok",
-  "redis": "ok"
+  "valkey": "ok"
 }
 ```
 
@@ -1304,7 +1304,7 @@ Check service health. Does not require authentication.
 {
   "status": "degraded",
   "db": "error",
-  "redis": "ok"
+  "valkey": "ok"
 }
 ```
 

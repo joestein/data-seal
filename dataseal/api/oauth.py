@@ -167,7 +167,7 @@ async def authorize(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid redirect_uri"
         )
 
-    # Generate authorization code and store in Redis with 10-minute TTL
+    # Generate authorization code and store in Valkey with 10-minute TTL
     code = secrets.token_urlsafe(32)
     store_auth_code(
         code=code,
@@ -224,7 +224,7 @@ async def _handle_auth_code_grant(
             detail="Missing required parameters: code, client_id, client_secret",
         )
 
-    # Consume auth code from Redis (single-use, auto-expires after 10 minutes)
+    # Consume auth code from Valkey (single-use, auto-expires after 10 minutes)
     code_data = consume_auth_code(data.code)
     if not code_data:
         raise HTTPException(

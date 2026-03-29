@@ -6,7 +6,7 @@ services:
     environment:
       - DATABASE_URL=postgresql+asyncpg://dataseal:dataseal@db:5432/dataseal
       - DATABASE_URL_SYNC=postgresql://dataseal:dataseal@db:5432/dataseal
-      - REDIS_URL=redis://redis:6379/0
+      - VALKEY_URL=redis://valkey:6379/0
       - SMTP_HOST=mailhog
       - SMTP_PORT=1025
       - SECRET_KEY=change-me-in-production-use-a-long-random-string
@@ -18,7 +18,7 @@ services:
     depends_on:
       db:
         condition: service_healthy
-      redis:
+      valkey:
         condition: service_healthy
     command: >
       sh -c "
@@ -31,7 +31,7 @@ services:
     environment:
       - DATABASE_URL=postgresql+asyncpg://dataseal:dataseal@db:5432/dataseal
       - DATABASE_URL_SYNC=postgresql://dataseal:dataseal@db:5432/dataseal
-      - REDIS_URL=redis://redis:6379/0
+      - VALKEY_URL=redis://valkey:6379/0
       - SMTP_HOST=mailhog
       - SMTP_PORT=1025
       - SECRET_KEY=change-me-in-production-use-a-long-random-string
@@ -42,19 +42,19 @@ services:
     depends_on:
       db:
         condition: service_healthy
-      redis:
+      valkey:
         condition: service_healthy
     command: celery -A dataseal.tasks.celery_app worker --loglevel=info --concurrency=4 -Q celery,emails,documents,webhooks,finalize
 
   celery-beat:
     build: .
     environment:
-      - REDIS_URL=redis://redis:6379/0
+      - VALKEY_URL=redis://valkey:6379/0
       - SECRET_KEY=change-me-in-production-use-a-long-random-string
       - DATABASE_URL=postgresql+asyncpg://dataseal:dataseal@db:5432/dataseal
       - DATABASE_URL_SYNC=postgresql://dataseal:dataseal@db:5432/dataseal
     depends_on:
-      redis:
+      valkey:
         condition: service_healthy
     command: celery -A dataseal.tasks.celery_app beat --loglevel=info
 
@@ -74,12 +74,12 @@ services:
       timeout: 5s
       retries: 5
 
-  redis:
-    image: redis:7-alpine
+  valkey:
+    image: valkey/valkey:8-alpine
     ports:
       - "6379:6379"
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD", "valkey-cli", "ping"]
       interval: 5s
       timeout: 5s
       retries: 5

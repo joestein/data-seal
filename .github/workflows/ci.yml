@@ -147,7 +147,9 @@ jobs:
           restore-keys: pip-security-
 
       - name: Install project and security tools
-        run: pip install -e ".[dev]" pip-audit bandit
+        run: |
+          pip install --upgrade pip
+          pip install -e ".[dev]" pip-audit bandit
 
       - name: Dependency audit (pip-audit)
         run: pip-audit --skip-editable || echo "AUDIT_FAILED=1" >> "$GITHUB_ENV"

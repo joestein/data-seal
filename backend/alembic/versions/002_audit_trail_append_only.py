@@ -24,7 +24,7 @@ def upgrade() -> None:
         CREATE OR REPLACE FUNCTION prevent_audit_modification()
         RETURNS TRIGGER AS $$
         BEGIN
-            RAISE EXCEPTION 'audit_events table is append-only: %% operations are not permitted', TG_OP;
+            RAISE EXCEPTION 'audit_events table is append-only: % operations are not permitted', TG_OP;
             RETURN NULL;
         END;
         $$ LANGUAGE plpgsql;

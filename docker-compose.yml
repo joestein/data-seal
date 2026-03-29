@@ -1,8 +1,15 @@
 services:
-  app:
-    build: .
+  frontend:
+    build: ./frontend
     ports:
-      - "8000:8000"
+      - "3000:80"
+    depends_on:
+      - app
+
+  app:
+    build: ./backend
+    ports:
+      - "18000:8000"
     environment:
       - DATABASE_URL=postgresql+asyncpg://dataseal:dataseal@db:5432/dataseal
       - DATABASE_URL_SYNC=postgresql://dataseal:dataseal@db:5432/dataseal
@@ -27,7 +34,7 @@ services:
       "
 
   celery-worker:
-    build: .
+    build: ./backend
     environment:
       - DATABASE_URL=postgresql+asyncpg://dataseal:dataseal@db:5432/dataseal
       - DATABASE_URL_SYNC=postgresql://dataseal:dataseal@db:5432/dataseal
@@ -47,7 +54,7 @@ services:
     command: celery -A dataseal.tasks.celery_app worker --loglevel=info --concurrency=4 -Q celery,emails,documents,webhooks,finalize
 
   celery-beat:
-    build: .
+    build: ./backend
     environment:
       - VALKEY_URL=redis://valkey:6379/0
       - SECRET_KEY=change-me-in-production-use-a-long-random-string
@@ -67,7 +74,7 @@ services:
     volumes:
       - pg_data:/var/lib/postgresql/data
     ports:
-      - "5432:5432"
+      - "15432:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U dataseal"]
       interval: 5s

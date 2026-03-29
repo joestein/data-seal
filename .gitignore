@@ -206,3 +206,9 @@ marimo/_static/
 marimo/_lsp/
 __marimo__/
 .on-loop/
+
+# Node / Frontend
+node_modules/
+frontend/dist/
+frontend/.env.local
+*.tsbuildinfo
